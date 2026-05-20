@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pháp Luật Nhà Đất — Hướng dẫn thủ tục & Điền biểu mẫu tự động</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js" defer></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#065f46',
+                        'primary-dark': '#064e3b',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors">
+
+    <!-- Header -->
+    <header class="glass-navbar print:hidden">
+        <div class="max-w-5xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <button id="btn-home" class="flex items-center gap-3 hover:opacity-80 transition-opacity" aria-label="Về trang chủ">
+                    <div class="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-lg font-bold tracking-wide leading-tight text-gray-800 dark:text-gray-100">PHÁP LUẬT NHÀ ĐẤT</h1>
+                        <p class="text-emerald-600 dark:text-emerald-400 text-xs font-medium">Thủ tục bất động sản & Điền biểu mẫu tự động</p>
+                    </div>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="btn-dark-mode" class="p-2 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all text-gray-600 dark:text-gray-300 hover:text-emerald-700" aria-label="Chuyển chế độ sáng/tối">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    </button>
+                    <button id="btn-profile" class="flex items-center gap-2 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 px-3 py-2 rounded-xl transition-all text-sm text-gray-600 dark:text-gray-300 hover:text-emerald-700" aria-label="Thông tin cá nhân">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <span class="hidden sm:inline">Thông tin của tôi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ======================== -->
+    <!-- VIEW: HOME               -->
+    <!-- ======================== -->
+    <section id="view-home" class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Profile banner -->
+        <div id="profile-banner" class="mb-6 rounded-xl border p-4 flex items-center justify-between"></div>
+
+        <!-- Cost Calculator Card -->
+        <div class="mb-8">
+            <button id="btn-open-calc" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 text-left hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-lg transition-all group" style="box-shadow: var(--shadow-sm)">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-100 text-base">Tính chi phí giao dịch BĐS</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Nhập giá trị BĐS → biết ngay thuế TNCN, lệ phí trước bạ, phí công chứng</p>
+                    </div>
+                    <svg class="w-5 h-5 text-emerald-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </button>
+        </div>
+
+        <!-- Form History -->
+        <div id="form-history" class="mb-8 hidden"></div>
+
+        <!-- Category filter -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar" id="category-tabs"></div>
+
+        <!-- Procedure list -->
+        <div id="procedure-list" class="grid gap-4 md:grid-cols-2"></div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- VIEW: COST CALCULATOR    -->
+    <!-- ======================== -->
+    <section id="view-calculator" class="max-w-3xl mx-auto px-4 py-8 hidden print:hidden">
+        <button id="btn-back-calc" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-6 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            Về trang chủ
+        </button>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style="box-shadow: var(--shadow-sm)">
+            <div class="bg-emerald-700 dark:bg-emerald-800 text-white px-6 py-5 rounded-t-2xl">
+                <h2 class="text-lg font-semibold">Tính chi phí giao dịch bất động sản</h2>
+                <p class="text-emerald-100 text-sm mt-1">Ước tính thuế, phí phải nộp khi mua bán / tặng cho / thừa kế / cho thuê BĐS</p>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Transaction type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hình thức giao dịch</label>
+                    <div class="flex flex-wrap gap-2" id="calc-type-options">
+                        <button class="calc-type-btn flex-1 min-w-[calc(25%-0.5rem)]" data-type="mua_ban">🏠 Mua bán</button>
+                        <button class="calc-type-btn flex-1 min-w-[calc(25%-0.5rem)]" data-type="tang_cho">🎁 Tặng cho</button>
+                        <button class="calc-type-btn flex-1 min-w-[calc(25%-0.5rem)]" data-type="thua_ke">📜 Thừa kế</button>
+                        <button class="calc-type-btn flex-1 min-w-[calc(25%-0.5rem)]" data-type="cho_thue">🏘️ Cho thuê</button>
+                        <button class="calc-type-btn flex-1 min-w-[calc(50%-0.25rem)]" data-type="tong_hop">📊 Nhiều BĐS</button>
+                    </div>
+                </div>
+
+                <!-- Relationship (for tang_cho / thua_ke) -->
+                <div id="calc-relationship-group" class="hidden">
+                    <label for="calc-relationship" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quan hệ giữa hai bên</label>
+                    <select id="calc-relationship" class="form-input form-select">
+                        <option value="none">Không có quan hệ huyết thống</option>
+                        <option value="spouse">Vợ — chồng</option>
+                        <option value="parent_child">Cha mẹ đẻ — con đẻ / Cha mẹ nuôi — con nuôi</option>
+                        <option value="in_law">Cha mẹ chồng/vợ — con dâu/rể</option>
+                        <option value="grandparent">Ông bà — cháu</option>
+                        <option value="sibling">Anh chị em ruột</option>
+                    </select>
+                </div>
+
+                <!-- Property value -->
+                <div>
+                    <label for="calc-value" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Giá trị BĐS (VNĐ)</label>
+                    <input type="text" id="calc-value" class="form-input text-lg font-semibold" placeholder="VD: 3,000,000,000" inputmode="numeric">
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Giá theo hợp đồng hoặc bảng giá UBND (lấy giá cao hơn)</p>
+                </div>
+
+                <!-- Quick value buttons -->
+                <div id="calc-quick-buttons" class="flex flex-wrap gap-2">
+                    <button class="calc-quick-btn" data-amount="1000000000">1 tỷ</button>
+                    <button class="calc-quick-btn" data-amount="2000000000">2 tỷ</button>
+                    <button class="calc-quick-btn" data-amount="3000000000">3 tỷ</button>
+                    <button class="calc-quick-btn" data-amount="5000000000">5 tỷ</button>
+                    <button class="calc-quick-btn" data-amount="10000000000">10 tỷ</button>
+                </div>
+
+                <!-- Multi-property area (hidden by default) -->
+                <div id="calc-multi-area" class="hidden space-y-3">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Thêm từng BĐS vào danh sách, hệ thống sẽ tổng hợp thuế/phí cho tất cả.</p>
+                    <div id="calc-multi-list" class="space-y-3"></div>
+                    <button id="btn-add-property" class="w-full py-2.5 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors">+ Thêm BĐS</button>
+                </div>
+
+                <!-- Calculate button -->
+                <button id="btn-calculate" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md text-base">
+                    Tính chi phí →
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="calc-results" class="hidden border-t border-gray-200 dark:border-gray-700">
+                <div class="p-6">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Kết quả ước tính
+                    </h3>
+                    <div id="calc-results-body" class="space-y-3"></div>
+                    <div id="calc-total" class="mt-5 pt-4 border-t border-gray-200"></div>
+                    <div id="calc-notes" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- VIEW: PROCEDURE WORKFLOW -->
+    <!-- ======================== -->
+    <section id="view-procedure" class="hidden">
+        <div class="max-w-5xl mx-auto px-4 py-6 print:hidden">
+            <button id="btn-back-home" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-4 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Tất cả thủ tục
+            </button>
+
+            <!-- Procedure header -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6" style="box-shadow: var(--shadow-sm)">
+                <div class="flex items-start gap-4">
+                    <div id="proc-icon" class="text-4xl w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center flex-shrink-0"></div>
+                    <div class="flex-1">
+                        <h2 id="proc-title" class="text-xl font-bold text-gray-800 dark:text-gray-100"></h2>
+                        <div id="proc-meta" class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-gray-500 dark:text-gray-400"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow tabs -->
+            <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto no-scrollbar" id="workflow-tabs"></div>
+
+            <!-- Workflow content -->
+            <div id="workflow-content"></div>
+        </div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- VIEW: FORM QUESTIONNAIRE -->
+    <!-- ======================== -->
+    <section id="view-questionnaire" class="max-w-2xl mx-auto px-4 py-8 hidden print:hidden">
+        <button id="btn-back-proc" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-6 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            Quay lại thủ tục
+        </button>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style="box-shadow: var(--shadow-md)">
+            <div class="bg-emerald-700 dark:bg-emerald-800 text-white px-6 py-4 rounded-t-2xl">
+                <h2 id="form-title" class="text-lg font-semibold"></h2>
+                <p id="form-subtitle" class="text-emerald-100 text-sm mt-1"></p>
+            </div>
+
+            <div class="px-6 pt-4">
+                <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <span>Tiến trình</span>
+                    <span id="progress-text">0/0</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                    <div id="progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div id="question-area" class="p-6"></div>
+
+            <div class="px-6 pb-6 flex items-center justify-between">
+                <button id="btn-prev" class="px-5 py-2.5 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium">
+                    ← Câu trước
+                </button>
+                <button id="btn-next" class="px-5 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all hover:shadow-md font-medium">
+                    Câu tiếp →
+                </button>
+                <button id="btn-generate" class="px-5 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all hover:shadow-md hidden font-medium">
+                    Tạo biểu mẫu ✓
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- VIEW: FORM PREVIEW       -->
+    <!-- ======================== -->
+    <section id="view-preview" class="hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8 print:hidden">
+            <div class="flex items-center justify-between mb-6">
+                <button id="btn-back-form" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    Quay lại chỉnh sửa
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="btn-export-pdf" class="px-5 py-2.5 text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all hover:shadow-md flex items-center gap-2 font-medium" aria-label="Xuất file PDF">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Xuất PDF
+                    </button>
+                    <button id="btn-print" class="px-5 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all hover:shadow-md flex items-center gap-2 font-medium" aria-label="In biểu mẫu">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        In biểu mẫu
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="form-output" class="form-paper max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none"></div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- PROFILE MODAL            -->
+    <!-- ======================== -->
+    <div id="profile-modal" class="fixed inset-0 z-50 hidden print:hidden">
+        <div class="absolute inset-0 bg-black/50" id="profile-overlay"></div>
+        <div class="absolute inset-y-0 right-0 w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl flex flex-col rounded-l-2xl">
+            <div class="bg-emerald-700 dark:bg-emerald-800 text-white px-6 py-5 flex items-center justify-between rounded-tl-2xl">
+                <div>
+                    <h2 class="text-lg font-semibold">Thông tin tự động điền</h2>
+                    <p class="text-emerald-100 text-sm">Lưu một lần, tự động điền cho mọi biểu mẫu</p>
+                </div>
+                <button id="btn-close-profile" class="p-1.5 hover:bg-white/20 rounded-xl transition-colors" aria-label="Đóng">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="flex border-b border-gray-200 dark:border-gray-700 px-6" id="profile-tabs">
+                <button class="profile-tab active" data-ptab="personal">Cá nhân <span class="profile-tab__badge" id="ptab-count-personal">0</span></button>
+                <button class="profile-tab" data-ptab="party2">Bên liên quan <span class="profile-tab__badge" id="ptab-count-party2">0</span></button>
+                <button class="profile-tab" data-ptab="property">Bất động sản <span class="profile-tab__badge" id="ptab-count-property">0</span></button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                <!-- Tab 1: Cá nhân -->
+                <div id="ptab-personal" class="profile-tab-panel space-y-4">
+                    <div>
+                        <label for="pf-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Họ và tên</label>
+                        <input type="text" id="pf-name" data-profile="name" class="form-input" placeholder="VD: Nguyễn Văn A">
+                    </div>
+                    <div>
+                        <label for="pf-birthYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Năm sinh</label>
+                        <input type="text" id="pf-birthYear" data-profile="birthYear" class="form-input" placeholder="VD: 1990">
+                    </div>
+                    <div>
+                        <label for="pf-idType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Loại giấy tờ nhân thân</label>
+                        <select id="pf-idType" data-profile="idType" class="form-input form-select">
+                            <option value="">-- Chọn --</option>
+                            <option value="cmnd">CMND</option>
+                            <option value="cccd">Căn cước công dân</option>
+                            <option value="hochieu">Hộ chiếu</option>
+                            <option value="gpkd">Giấy phép kinh doanh</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="pf-idNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Số CMND/CCCD/Hộ chiếu</label>
+                        <input type="text" id="pf-idNumber" data-profile="idNumber" class="form-input" placeholder="VD: 001234567890">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="pf-idIssuedDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày cấp</label>
+                            <input type="date" id="pf-idIssuedDate" data-profile="idIssuedDate" class="form-input">
+                        </div>
+                        <div>
+                            <label for="pf-idIssuedPlace" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nơi cấp</label>
+                            <input type="text" id="pf-idIssuedPlace" data-profile="idIssuedPlace" class="form-input" placeholder="VD: Cục CSQLHC về TTXH">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pf-address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Địa chỉ thường trú</label>
+                        <input type="text" id="pf-address" data-profile="address" class="form-input" placeholder="VD: Số 10, Lê Lợi, P. Bến Nghé, Q.1, TP.HCM">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="pf-district" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quận/huyện</label>
+                            <input type="text" id="pf-district" data-profile="district" class="form-input" placeholder="VD: Quận 1">
+                        </div>
+                        <div>
+                            <label for="pf-province" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tỉnh/Thành phố</label>
+                            <input type="text" id="pf-province" data-profile="province" class="form-input" placeholder="VD: TP.HCM">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pf-phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Điện thoại</label>
+                        <input type="tel" id="pf-phone" data-profile="phone" class="form-input" placeholder="VD: 0912345678">
+                    </div>
+                    <div>
+                        <label for="pf-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                        <input type="email" id="pf-email" data-profile="email" class="form-input" placeholder="VD: email@example.com">
+                    </div>
+                    <div>
+                        <label for="pf-taxCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mã số thuế</label>
+                        <input type="text" id="pf-taxCode" data-profile="taxCode" class="form-input" placeholder="VD: 0123456789">
+                    </div>
+                </div>
+                <!-- Tab 2: Bên liên quan -->
+                <div id="ptab-party2" class="profile-tab-panel space-y-4 hidden">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Thông tin đối tác trong giao dịch (bên bán, bên mua, bên được ủy quyền...). Sẽ tự động điền vào phần "bên còn lại" khi chọn biểu mẫu.</p>
+                    <div>
+                        <label for="pf-p2name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Họ và tên</label>
+                        <input type="text" id="pf-p2name" data-profile="party2_name" class="form-input" placeholder="VD: Trần Thị B">
+                    </div>
+                    <div>
+                        <label for="pf-p2birthYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Năm sinh</label>
+                        <input type="text" id="pf-p2birthYear" data-profile="party2_birthYear" class="form-input" placeholder="VD: 1985">
+                    </div>
+                    <div>
+                        <label for="pf-p2idNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Số CMND/CCCD</label>
+                        <input type="text" id="pf-p2idNumber" data-profile="party2_idNumber" class="form-input" placeholder="VD: 001234567890">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="pf-p2idDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày cấp</label>
+                            <input type="date" id="pf-p2idDate" data-profile="party2_idDate" class="form-input">
+                        </div>
+                        <div>
+                            <label for="pf-p2idPlace" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nơi cấp</label>
+                            <input type="text" id="pf-p2idPlace" data-profile="party2_idPlace" class="form-input" placeholder="VD: CA tỉnh Bình Dương">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pf-p2address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Địa chỉ thường trú</label>
+                        <input type="text" id="pf-p2address" data-profile="party2_address" class="form-input" placeholder="VD: Số 20, Trần Hưng Đạo, Q.5, TP.HCM">
+                    </div>
+                    <div>
+                        <label for="pf-p2phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Điện thoại</label>
+                        <input type="tel" id="pf-p2phone" data-profile="party2_phone" class="form-input" placeholder="VD: 0987654321">
+                    </div>
+                </div>
+                <!-- Tab 3: Bất động sản -->
+                <div id="ptab-property" class="profile-tab-panel space-y-4 hidden">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Thông tin BĐS mặc định — sẽ tự động điền khi bạn chọn biểu mẫu.</p>
+                    <div>
+                        <label for="pf-propAddress" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Địa chỉ BĐS</label>
+                        <input type="text" id="pf-propAddress" data-profile="prop_address" class="form-input" placeholder="VD: Số 5, Nguyễn Huệ, Q.1, TP.HCM">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="pf-propParcel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Thửa đất số</label>
+                            <input type="text" id="pf-propParcel" data-profile="prop_parcelNumber" class="form-input" placeholder="VD: 123">
+                        </div>
+                        <div>
+                            <label for="pf-propMap" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tờ bản đồ số</label>
+                            <input type="text" id="pf-propMap" data-profile="prop_mapNumber" class="form-input" placeholder="VD: 45">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="pf-propGcn" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Số GCN QSD đất</label>
+                            <input type="text" id="pf-propGcn" data-profile="prop_gcnNumber" class="form-input" placeholder="VD: AB 123456">
+                        </div>
+                        <div>
+                            <label for="pf-propGcnDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày cấp GCN</label>
+                            <input type="date" id="pf-propGcnDate" data-profile="prop_gcnDate" class="form-input">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pf-propArea" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diện tích (m²)</label>
+                        <input type="text" id="pf-propArea" data-profile="prop_landArea" class="form-input" placeholder="VD: 120">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                <button id="btn-clear-profile" class="px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium">Xóa tất cả</button>
+                <button id="btn-save-profile" class="px-6 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all hover:shadow-md font-medium">Lưu thông tin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!-- CHATBOT WIDGET           -->
+    <!-- ======================== -->
+    <div id="chatbot-fab" class="fixed bottom-6 right-6 z-40 print:hidden">
+        <button id="btn-toggle-chat" class="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center group" style="box-shadow: 0 4px 20px rgba(6,95,70,0.3)" aria-label="Mở trợ lý pháp luật">
+            <svg id="chat-icon-open" class="w-7 h-7 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <svg id="chat-icon-close" class="w-7 h-7 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div id="chat-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">1</div>
+    </div>
+
+    <div id="chatbot-panel" class="fixed bottom-24 right-6 z-40 w-[360px] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col hidden print:hidden" style="max-height: min(520px, calc(100vh - 8rem)); box-shadow: var(--shadow-xl)">
+        <!-- Chat header -->
+        <div class="bg-emerald-700 dark:bg-emerald-800 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm">⚖️</div>
+                <div>
+                    <h3 class="font-semibold text-sm leading-tight">Trợ lý Pháp luật Nhà đất</h3>
+                    <p class="text-emerald-200 text-xs">Hỏi đáp & Hướng dẫn thủ tục</p>
+                </div>
+            </div>
+            <button id="btn-clear-chat" class="p-1 hover:bg-white/20 rounded-lg transition-colors" aria-label="Xóa hội thoại" title="Xóa hội thoại">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+        </div>
+
+        <!-- Chat messages -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" style="min-height: 200px"></div>
+
+        <!-- Quick replies -->
+        <div id="chat-quick-replies" class="px-4 pb-2 flex flex-wrap gap-1.5 flex-shrink-0"></div>
+
+        <!-- Chat input -->
+        <div class="px-3 pb-3 flex items-center gap-2 flex-shrink-0">
+            <div class="flex-1 relative">
+                <input type="text" id="chat-input" class="w-full pl-3 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="Hỏi về thủ tục nhà đất...">
+                <button id="btn-voice" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-emerald-600 transition-colors" aria-label="Nói bằng giọng nói" title="Nhấn để nói">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z"/></svg>
+                </button>
+            </div>
+            <button id="btn-send-chat" class="w-10 h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition-all hover:shadow-md flex-shrink-0" aria-label="Gửi">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none print:hidden"></div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
