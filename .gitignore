@@ -1,4 +1,6 @@
 node_modules/
-*.png
+ux-*.png
+ux2-*.png
 _test.js
 .vscode/
+form-filler/icons/gen-icons.js

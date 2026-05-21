@@ -1,4 +1,32 @@
 // ================================================================
+// GLOSSARY (legal term tooltips)
+// ================================================================
+const TERM_GLOSSARY = {
+    "Lệ phí trước bạ": "Phí nộp khi đăng ký quyền sở hữu/sử dụng tài sản lần đầu. Thường 0.5% giá trị BĐS.",
+    "Thuế TNCN": "Thuế thu nhập cá nhân — 2% giá chuyển nhượng BĐS hoặc 5% thu nhập cho thuê.",
+    "Công chứng": "Xác nhận tính hợp pháp của hợp đồng/giao dịch tại văn phòng công chứng.",
+    "GCN": "Giấy chứng nhận quyền sử dụng đất, quyền sở hữu nhà (sổ đỏ/sổ hồng).",
+    "Biến động": "Đăng ký thay đổi thông tin trên GCN (chuyển nhượng, tặng cho, thừa kế...).",
+    "QSDĐ": "Quyền sử dụng đất — quyền được Nhà nước giao hoặc cho thuê đất.",
+    "Phí thẩm định": "Phí cơ quan nhà nước thu để thẩm tra, xác minh hồ sơ đăng ký.",
+    "Hợp đồng đặt cọc": "Thỏa thuận đặt tiền trước để bảo đảm giao kết hợp đồng chính thức.",
+    "Ủy quyền": "Văn bản cho phép người khác thay mặt mình thực hiện giao dịch.",
+    "CCCD": "Căn cước công dân — giấy tờ tùy thân do công an cấp."
+};
+function wrapTermsWithTooltips(html) {
+    let result = html;
+    for (const [term, tip] of Object.entries(TERM_GLOSSARY)) {
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(?<=>)([^<]*?)\\b(${escaped})\\b`, "");
+        const m = result.match(re);
+        if (m && !m[0].includes("term-tooltip")) {
+            result = result.replace(re, `$1<span class="term-tooltip" data-tip="${tip}" tabindex="0">$2</span>`);
+        }
+    }
+    return result;
+}
+
+// ================================================================
 // DATA: CATEGORIES
 // ================================================================
 const CATEGORIES = [
@@ -2049,11 +2077,11 @@ function updateProfileFromAnswers() {
 // PERSISTENCE
 // ================================================================
 function loadChecklist(procId) { try { return JSON.parse(localStorage.getItem(`cl_${procId}`)) || {}; } catch { return {}; } }
-function saveChecklist(procId, data) { localStorage.setItem(`cl_${procId}`, JSON.stringify(data)); }
+function saveChecklist(procId, data) { localStorage.setItem(`cl_${procId}`, JSON.stringify(data)); showSaveIndicator(); }
 function loadFilledForms(procId) { try { return JSON.parse(localStorage.getItem(`ff_${procId}`)) || {}; } catch { return {}; } }
-function markFormFilled(procId, formId) { const d = loadFilledForms(procId); d[formId] = true; localStorage.setItem(`ff_${procId}`, JSON.stringify(d)); }
+function markFormFilled(procId, formId) { const d = loadFilledForms(procId); d[formId] = true; localStorage.setItem(`ff_${procId}`, JSON.stringify(d)); showSaveIndicator(); }
 function loadIntakeContext(procId) { try { return JSON.parse(localStorage.getItem(`ctx_${procId}`)) || {}; } catch { return {}; } }
-function saveIntakeContext(procId, ctx) { localStorage.setItem(`ctx_${procId}`, JSON.stringify(ctx)); }
+function saveIntakeContext(procId, ctx) { localStorage.setItem(`ctx_${procId}`, JSON.stringify(ctx)); showSaveIndicator(); }
 
 // ================================================================
 // STATE
@@ -2099,6 +2127,43 @@ function showToast(msg, type = "success", ms = 3500) {
         toast.classList.add("toast-out");
         toast.addEventListener("animationend", () => toast.remove());
     }, ms);
+}
+
+// ================================================================
+// CELEBRATION
+// ================================================================
+function triggerCelebration() {
+    const container = document.createElement("div");
+    container.className = "confetti-container";
+    const colors = ["#10b981", "#065f46", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
+    for (let i = 0; i < 35; i++) {
+        const p = document.createElement("div");
+        p.className = "confetti-particle";
+        p.style.left = `${Math.random() * 100}%`;
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.setProperty("--delay", `${Math.random() * 0.8}s`);
+        p.style.setProperty("--duration", `${1.8 + Math.random() * 1.2}s`);
+        p.style.setProperty("--spin", `${400 + Math.random() * 600}deg`);
+        p.style.width = `${6 + Math.random() * 6}px`;
+        p.style.height = `${8 + Math.random() * 8}px`;
+        container.appendChild(p);
+    }
+    document.body.appendChild(container);
+    setTimeout(() => container.remove(), 3500);
+}
+
+// ================================================================
+// SAVE INDICATOR
+// ================================================================
+let saveIndicatorTimeout = null;
+function showSaveIndicator() {
+    const el = $("#save-indicator");
+    if (!el) return;
+    el.classList.remove("is-visible");
+    void el.offsetWidth;
+    el.classList.add("is-visible");
+    clearTimeout(saveIndicatorTimeout);
+    saveIndicatorTimeout = setTimeout(() => el.classList.remove("is-visible"), 1900);
 }
 
 // ================================================================
@@ -2245,6 +2310,7 @@ function renderFormHistory() {
 // INIT
 // ================================================================
 function init() {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
     initDarkMode();
     renderCategories();
     renderProcedureList();
@@ -2570,7 +2636,7 @@ function renderOverview(el, p) {
     if (!resolvedWF) return;
     const wf = resolvedWF;
 
-    el.innerHTML = `
+    el.innerHTML = wrapTermsWithTooltips(`
         ${wf.notes.length || wf.warnings.length ? `
         <div class="space-y-2 mb-6">
             ${wf.notes.map(n => `<div class="rounded-2xl p-3 text-sm bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300">${n}</div>`).join("")}
@@ -2606,7 +2672,7 @@ function renderOverview(el, p) {
         <div class="mt-6 text-center">
             <button class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-elig">Kiểm tra điều kiện →</button>
         </div>
-    `;
+    `);
     $("#btn-to-elig").addEventListener("click", () => { currentTab = "eligibility"; renderWorkflowTabs(); renderTabContent(); });
 }
 
@@ -2674,7 +2740,7 @@ function renderChecklist(el, p) {
     const groupedReq = groups.map(g => ({ group: g, label: groupLabels[g], items: req.filter(r => r.group === g) })).filter(g => g.items.length > 0);
     const groupedOpt = opt.filter(r => r.group);
 
-    el.innerHTML = `
+    el.innerHTML = wrapTermsWithTooltips(`
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4" style="box-shadow: var(--shadow-xs)">
             <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-gray-800 dark:text-gray-100">Hồ sơ cần chuẩn bị</h3><span class="text-sm font-medium ${pct === 100 ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'}">${done}/${req.length} bắt buộc</span></div>
             <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mb-5"><div class="h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-emerald-500'}" style="width:${pct}%"></div></div>
@@ -2693,7 +2759,7 @@ function renderChecklist(el, p) {
             ${groupedOpt.length ? `<div class="border-t border-gray-100 pt-3 mt-3"><div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Tùy trường hợp</div><div class="space-y-2">${groupedOpt.map(r => renderItem(r, false)).join("")}</div></div>` : ""}
         </div>
         ${pct === 100 ? `<div class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="text-2xl">✅</span><div><div class="font-semibold text-green-800 dark:text-green-300">Hồ sơ bắt buộc đã đủ!</div><div class="text-sm text-green-600 dark:text-green-400">Điền các biểu mẫu cần thiết.</div></div></div><button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-f">Điền biểu mẫu →</button></div>` : ""}
-    `;
+    `);
     el.querySelectorAll(".check-item").forEach(item => {
         item.addEventListener("click", (e) => {
             if (e.target.closest(".checklist-scan-btn")) return;
@@ -2712,6 +2778,10 @@ function renderChecklist(el, p) {
     });
     const toF = el.querySelector("#btn-to-f");
     if (toF) toF.addEventListener("click", () => { currentTab = "forms"; renderWorkflowTabs(); renderTabContent(); });
+    if (pct === 100 && !sessionStorage.getItem(`celebrated_cl_${currentProcId}`)) {
+        sessionStorage.setItem(`celebrated_cl_${currentProcId}`, "1");
+        triggerCelebration();
+    }
 }
 
 // --- TAB: FORMS ---
@@ -2720,7 +2790,7 @@ function renderFormCards(el) {
     const filled = loadFilledForms(currentProcId);
     const allFilled = resolvedWF.forms.every(fId => filled[fId]);
 
-    el.innerHTML = `
+    el.innerHTML = wrapTermsWithTooltips(`
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4" style="box-shadow: var(--shadow-xs)">
             <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-1">Biểu mẫu cần điền</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Hệ thống hỏi từng câu và tự động điền vào biểu mẫu cho bạn.</p>
@@ -2740,10 +2810,14 @@ function renderFormCards(el) {
             }).join("")}</div>
         </div>
         ${allFilled ? `<div class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="text-2xl">✅</span><div><div class="font-semibold text-green-800 dark:text-green-300">Đã điền tất cả biểu mẫu!</div><div class="text-sm text-green-600 dark:text-green-400">Xem hướng dẫn nộp hồ sơ.</div></div></div><button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-st">Hướng dẫn nộp →</button></div>` : ""}
-    `;
+    `);
     el.querySelectorAll("[data-fill]").forEach(b => b.addEventListener("click", () => showQuestionnaireView(b.dataset.fill, true)));
     const toSt = el.querySelector("#btn-to-st");
     if (toSt) toSt.addEventListener("click", () => { currentTab = "steps"; renderWorkflowTabs(); renderTabContent(); });
+    if (allFilled && !sessionStorage.getItem(`celebrated_ff_${currentProcId}`)) {
+        sessionStorage.setItem(`celebrated_ff_${currentProcId}`, "1");
+        triggerCelebration();
+    }
 }
 
 // --- TAB: STEPS ---
@@ -2916,7 +2990,7 @@ let scanParsedData = null;
 let scanRequirementId = null;
 
 function loadUploadedDocs(procId) { try { return JSON.parse(localStorage.getItem(`udocs_${procId}`)) || {}; } catch { return {}; } }
-function saveUploadedDocs(procId, data) { localStorage.setItem(`udocs_${procId}`, JSON.stringify(data)); }
+function saveUploadedDocs(procId, data) { localStorage.setItem(`udocs_${procId}`, JSON.stringify(data)); showSaveIndicator(); }
 
 const REQUIREMENT_DOC_TYPE_MAP = {
     gcn: "gcn",
@@ -3642,6 +3716,19 @@ function initDocScanner() {
     if (galleryInput) galleryInput.addEventListener("change", (e) => {
         if (e.target.files[0]) onScanImageSelected(e.target.files[0]);
     });
+
+    const dropZone = $("#scan-drop-zone");
+    if (dropZone) {
+        dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("scan-drop-zone--active"); });
+        dropZone.addEventListener("dragenter", (e) => { e.preventDefault(); dropZone.classList.add("scan-drop-zone--active"); });
+        dropZone.addEventListener("dragleave", (e) => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove("scan-drop-zone--active"); });
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("scan-drop-zone--active");
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith("image/")) onScanImageSelected(file);
+        });
+    }
 
     const retakeBtn = $("#btn-scan-retake");
     if (retakeBtn) retakeBtn.addEventListener("click", () => {

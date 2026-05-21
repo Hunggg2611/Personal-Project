@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pháp Luật Nhà Đất — Hướng dẫn thủ tục & Điền biểu mẫu tự động</title>
+    <meta name="theme-color" content="#065f46">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -477,19 +482,25 @@
                                 <option value="other">Giấy tờ khác</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="scan-capture-btn cursor-pointer">
-                                <input type="file" accept="image/*" capture="environment" class="hidden" id="scan-input-camera">
-                                <svg class="w-8 h-8 mx-auto mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chụp ảnh</span>
-                            </label>
-                            <label class="scan-capture-btn cursor-pointer">
-                                <input type="file" accept="image/*" class="hidden" id="scan-input-gallery">
-                                <svg class="w-8 h-8 mx-auto mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chọn ảnh</span>
-                            </label>
+                        <div id="scan-drop-zone" class="scan-drop-zone">
+                            <div class="scan-drop-zone__overlay">
+                                <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                Thả ảnh vào đây
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="scan-capture-btn cursor-pointer">
+                                    <input type="file" accept="image/*" capture="environment" class="hidden" id="scan-input-camera">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chụp ảnh</span>
+                                </label>
+                                <label class="scan-capture-btn cursor-pointer">
+                                    <input type="file" accept="image/*" class="hidden" id="scan-input-gallery">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chọn ảnh</span>
+                                </label>
+                            </div>
                         </div>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 text-center">Hỗ trợ ảnh JPG, PNG. Chụp rõ nét, đủ sáng để nhận dạng tốt nhất.</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 text-center">Hỗ trợ ảnh JPG, PNG. Kéo thả hoặc chọn ảnh. Chụp rõ nét để nhận dạng tốt nhất.</p>
                     </div>
                 </div>
 
@@ -610,6 +621,9 @@
 
     <!-- Toast container -->
     <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none print:hidden"></div>
+
+    <!-- Auto-save indicator -->
+    <div id="save-indicator" class="save-indicator print:hidden" aria-live="polite">Đã lưu ✓</div>
 
     <script src="js/main.js"></script>
 </body>
