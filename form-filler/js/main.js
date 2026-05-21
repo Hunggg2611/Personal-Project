@@ -2070,6 +2070,7 @@ let selectedCategory = "all";
 let intakeContext = {};
 let resolvedWF = null;
 let currentProfileTab = "personal";
+let uploadedDocuments = {};
 
 // ================================================================
 // DOM
@@ -2276,6 +2277,7 @@ function init() {
     }
 
     initCalculator();
+    initDocScanner();
 }
 
 // ================================================================
@@ -2351,7 +2353,7 @@ function renderProcedureList() {
 // PROCEDURE WORKFLOW
 // ================================================================
 const TABS = [
-    { id: "intake", label: "Tình huống", num: "1" },
+    { id: "intake", label: "Tài liệu", num: "1" },
     { id: "overview", label: "Tổng quan", num: "2" },
     { id: "eligibility", label: "Điều kiện", num: "3" },
     { id: "checklist", label: "Hồ sơ", num: "4" },
@@ -2366,6 +2368,13 @@ function renderProcedureHeader() {
     $("#proc-meta").innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-xs font-medium border border-gray-100 dark:border-gray-700">🏛️ ${p.agency}</span><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-xs font-medium border border-gray-100 dark:border-gray-700">📍 ${p.level}</span><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-xs font-medium border border-gray-100 dark:border-gray-700">⏱ ${p.estimatedDays}</span>`;
 }
 
+function updateScrollFade(container) {
+    if (!container) return;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    container.classList.toggle("can-scroll-left", scrollLeft > 2);
+    container.classList.toggle("can-scroll-right", scrollLeft + clientWidth < scrollWidth - 2);
+}
+
 function renderWorkflowTabs() {
     const el = $("#workflow-tabs");
     const locked = !resolvedWF;
@@ -2376,6 +2385,10 @@ function renderWorkflowTabs() {
         </button>`;
     }).join("");
     el.querySelectorAll(".wf-tab:not([disabled])").forEach(b => b.addEventListener("click", () => { currentTab = b.dataset.tab; renderWorkflowTabs(); renderTabContent(); }));
+    updateScrollFade(el);
+    el.addEventListener("scroll", () => updateScrollFade(el), { passive: true });
+    const activeTab = el.querySelector(".wf-tab.active");
+    if (activeTab) activeTab.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
 function renderTabContent() {
@@ -2393,25 +2406,57 @@ function renderTabContent() {
 
 // --- TAB: INTAKE ---
 function renderIntake(el, p) {
+    uploadedDocuments = loadUploadedDocs(currentProcId);
+
+    const inferred = inferIntakeFromDocuments(p, uploadedDocuments);
+    const reasons = inferred._reasons || {};
+    delete inferred._reasons;
+
+    for (const [k, v] of Object.entries(inferred)) {
+        if (!intakeContext[k] || intakeContext["_auto_" + k]) {
+            intakeContext[k] = v;
+            intakeContext["_auto_" + k] = true;
+        }
+    }
+
+    p.intake.forEach(q => {
+        if (q.showIf && !q.showIf(intakeContext)) delete intakeContext[q.id];
+    });
+
+    saveIntakeContext(currentProcId, intakeContext);
     const complete = isIntakeComplete(p, intakeContext);
+    if (complete) {
+        resolvedWF = resolveWorkflow(p, intakeContext);
+    }
+
+    const allReqs = complete ? resolvedWF.requirements : p.baseRequirements.filter(r => r.active);
+    const uploadableReqs = allReqs.filter(r => REQUIREMENT_DOC_TYPE_MAP[r.id]);
+
+    const uploadedCount = uploadableReqs.filter(r => uploadedDocuments[r.id]).length;
+    const totalUploadable = uploadableReqs.length;
+
+    const hasUploads = uploadedCount > 0;
+    const docGridOpen = hasUploads || (el._docGridOpen === true);
+
+    const visibleQuestions = p.intake.filter(q => !q.showIf || q.showIf(intakeContext));
+    const unanswered = visibleQuestions.filter(q => !intakeContext[q.id]);
 
     el.innerHTML = `
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4" style="box-shadow: var(--shadow-xs)">
-            <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-1">Cho chúng tôi biết tình huống của bạn</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Hệ thống sẽ xác định chính xác giấy tờ, thuế/phí, và quy trình phù hợp với trường hợp của bạn.</p>
-            <div class="space-y-5" id="intake-questions">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-1">Xác định tình huống của bạn</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Chọn các thông tin bên dưới để hệ thống xác định quy trình phù hợp.</p>
+            <div class="space-y-4">
                 ${p.intake.map(q => {
                     const visible = !q.showIf || q.showIf(intakeContext);
                     if (!visible) return "";
+                    const isAuto = intakeContext["_auto_" + q.id];
+                    const reason = reasons[q.id];
                     return `
-                    <div class="intake-q" data-intake="${q.id}">
-                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">${q.question}</div>
-                        <div class="grid gap-2 ${q.options.length <= 3 ? 'sm:grid-cols-' + q.options.length : 'sm:grid-cols-2'}">
+                    <div>
+                        <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">${q.question}${isAuto && reason ? ` <span class="text-xs text-emerald-500 font-normal ml-1">(tự động — ${reason})</span>` : ""}</div>
+                        <div class="flex flex-wrap gap-2">
                             ${q.options.map(o => `
-                                <label class="intake-option ${intakeContext[q.id] === o.value ? 'selected' : ''}">
-                                    <input type="radio" name="intake_${q.id}" value="${o.value}" ${intakeContext[q.id] === o.value ? 'checked' : ''} class="sr-only">
-                                    <span>${o.label}</span>
-                                </label>
+                                <button type="button" class="intake-pill ${intakeContext[q.id] === o.value ? 'intake-pill--active' : ''}" data-intake-id="${q.id}" data-intake-val="${o.value}">${o.label}</button>
                             `).join("")}
                         </div>
                     </div>`;
@@ -2419,33 +2464,73 @@ function renderIntake(el, p) {
             </div>
         </div>
 
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 mb-4" style="box-shadow: var(--shadow-xs)">
+            <button type="button" class="w-full p-5 flex items-center justify-between text-left" id="toggle-doc-grid">
+                <div>
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Tải lên giấy tờ
+                        <span class="text-xs font-normal text-gray-400 dark:text-gray-500">— Tùy chọn, giúp điền nhanh hơn</span>
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Chụp ảnh hoặc tải lên tài liệu để hệ thống tự nhận dạng, tự chọn tình huống và tự điền biểu mẫu.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                    ${uploadedCount > 0 ? `<span class="text-xs font-medium text-emerald-600">${uploadedCount}/${totalUploadable}</span>` : ""}
+                    <svg class="w-5 h-5 text-gray-400 transition-transform ${docGridOpen ? 'rotate-180' : ''}" id="doc-grid-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </button>
+            <div class="${docGridOpen ? '' : 'hidden'}" id="doc-grid-content">
+                <div class="px-5 pb-5">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        ${uploadableReqs.map(r => {
+                            const doc = uploadedDocuments[r.id];
+                            const isUploaded = !!doc;
+                            return `
+                            <div class="doc-upload-card ${isUploaded ? 'doc-upload-card--uploaded' : ''}" data-req-id="${r.id}" data-doc-type="${REQUIREMENT_DOC_TYPE_MAP[r.id]}">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-xl ${isUploaded ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'} flex items-center justify-center flex-shrink-0">
+                                        ${isUploaded
+                                            ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+                                            : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'
+                                        }
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">${r.name}</div>
+                                        <div class="text-xs mt-0.5 ${isUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">${isUploaded ? 'Đã nhận dạng ✓' : (r.required ? 'Bắt buộc' : 'Tùy chọn')}</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="doc-upload-card__btn mt-2" data-req-id="${r.id}">${isUploaded ? 'Quét lại' : 'Chụp / Tải lên'}</button>
+                            </div>`;
+                        }).join("")}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         ${complete ? `
-        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+        <div class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <span class="text-2xl">✅</span>
                 <div>
-                    <div class="font-semibold text-emerald-800">Tình huống đã xác định!</div>
-                    <div class="text-sm text-emerald-600">Hệ thống đã tùy chỉnh quy trình cho trường hợp của bạn.</div>
+                    <div class="font-semibold text-emerald-800 dark:text-emerald-300">Tình huống đã xác định!</div>
+                    <div class="text-sm text-emerald-600 dark:text-emerald-400">Hệ thống đã tùy chỉnh quy trình cho trường hợp của bạn.</div>
                 </div>
             </div>
             <button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-overview">Xem tổng quan →</button>
         </div>` : `
         <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-            Vui lòng trả lời tất cả câu hỏi để tiếp tục. Các bước tiếp theo sẽ được mở khóa sau khi hoàn thành.
+            Vui lòng chọn ${unanswered.length} mục còn lại ở trên để tiếp tục.
         </div>`}
     `;
 
-    el.querySelectorAll('input[type="radio"]').forEach(input => {
-        input.addEventListener("change", () => {
-            const qId = input.name.replace("intake_", "");
-            intakeContext[qId] = input.value;
-
+    el.querySelectorAll(".intake-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const qId = btn.dataset.intakeId;
+            intakeContext[qId] = btn.dataset.intakeVal;
+            delete intakeContext["_auto_" + qId];
             p.intake.forEach(q => {
-                if (q.showIf && !q.showIf(intakeContext)) {
-                    delete intakeContext[q.id];
-                }
+                if (q.showIf && !q.showIf(intakeContext)) delete intakeContext[q.id];
             });
-
             saveIntakeContext(currentProcId, intakeContext);
             if (isIntakeComplete(p, intakeContext)) {
                 resolvedWF = resolveWorkflow(p, intakeContext);
@@ -2454,6 +2539,25 @@ function renderIntake(el, p) {
             }
             renderWorkflowTabs();
             renderIntake(el, p);
+        });
+    });
+
+    const toggleBtn = el.querySelector("#toggle-doc-grid");
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+            const content = el.querySelector("#doc-grid-content");
+            const chevron = el.querySelector("#doc-grid-chevron");
+            if (content) content.classList.toggle("hidden");
+            if (chevron) chevron.classList.toggle("rotate-180");
+            el._docGridOpen = content && !content.classList.contains("hidden");
+        });
+    }
+
+    el.querySelectorAll(".doc-upload-card__btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const reqId = btn.dataset.reqId;
+            const docType = REQUIREMENT_DOC_TYPE_MAP[reqId];
+            openScanModal("personal", reqId, docType);
         });
     });
 
@@ -2539,19 +2643,32 @@ function renderEligibility(el, p) {
 function renderChecklist(el, p) {
     if (!resolvedWF) return;
     const cl = loadChecklist(currentProcId);
+    uploadedDocuments = loadUploadedDocs(currentProcId);
     const req = resolvedWF.requirements.filter(r => r.required);
     const opt = resolvedWF.requirements.filter(r => !r.required);
     const done = req.filter(r => cl[r.id]).length;
     const pct = req.length > 0 ? Math.round((done / req.length) * 100) : 0;
 
     const groupLabels = { cong_chung: "Giai đoạn 1: Công chứng", thue: "Giai đoạn 2: Khai thuế", bien_dong: "Giai đoạn 3: Đăng ký biến động" };
+    const groupIcons = {
+        cong_chung: '<svg class="check-group-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>',
+        thue: '<svg class="check-group-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
+        bien_dong: '<svg class="check-group-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>',
+    };
 
-    const renderItem = (r, showBadge) => `
+    const renderItem = (r, showBadge) => {
+        const isUploadable = !!REQUIREMENT_DOC_TYPE_MAP[r.id];
+        const isUploaded = !!uploadedDocuments[r.id];
+        return `
         <div class="check-item ${cl[r.id] ? 'checked' : ''}" data-check="${r.id}">
             <div class="check-box"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
-            <div class="check-label"><div class="text-sm font-medium text-gray-800 dark:text-gray-100">${r.name}</div>${r.note ? `<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${r.note}</div>` : ""}</div>
-            ${showBadge ? '<span class="text-xs text-red-500 font-medium">Bắt buộc</span>' : ""}
+            <div class="check-label"><div class="text-sm font-medium text-gray-800 dark:text-gray-100">${r.name}</div>${r.note ? `<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${r.note}</div>` : ""}${isUploaded ? '<div class="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Đã quét & nhận dạng ✓</div>' : ""}</div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                ${isUploadable ? `<button type="button" class="checklist-scan-btn" data-req-id="${r.id}" data-doc-type="${REQUIREMENT_DOC_TYPE_MAP[r.id]}" title="${isUploaded ? 'Quét lại' : 'Chụp / Tải lên'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>` : ""}
+                ${showBadge ? '<span class="text-xs text-red-500 font-medium">Bắt buộc</span>' : ""}
+            </div>
         </div>`;
+    };
 
     const groups = ["cong_chung", "thue", "bien_dong"];
     const groupedReq = groups.map(g => ({ group: g, label: groupLabels[g], items: req.filter(r => r.group === g) })).filter(g => g.items.length > 0);
@@ -2561,17 +2678,38 @@ function renderChecklist(el, p) {
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4" style="box-shadow: var(--shadow-xs)">
             <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-gray-800 dark:text-gray-100">Hồ sơ cần chuẩn bị</h3><span class="text-sm font-medium ${pct === 100 ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'}">${done}/${req.length} bắt buộc</span></div>
             <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mb-5"><div class="h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-emerald-500'}" style="width:${pct}%"></div></div>
-            ${groupedReq.map(g => `
+            ${groupedReq.map(g => {
+                const groupDone = g.items.filter(r => cl[r.id]).length;
+                return `
                 <div class="mb-4">
-                    <div class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mb-2 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>${g.label}</div>
+                    <div class="check-group-header check-group-header--${g.group}">
+                        ${groupIcons[g.group] || ''}
+                        <span>${g.label}</span>
+                        <span class="check-group-progress">${groupDone}/${g.items.length}</span>
+                    </div>
                     <div class="space-y-2">${g.items.map(r => renderItem(r, true)).join("")}</div>
                 </div>
-            `).join("")}
+            `; }).join("")}
             ${groupedOpt.length ? `<div class="border-t border-gray-100 pt-3 mt-3"><div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Tùy trường hợp</div><div class="space-y-2">${groupedOpt.map(r => renderItem(r, false)).join("")}</div></div>` : ""}
         </div>
         ${pct === 100 ? `<div class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="text-2xl">✅</span><div><div class="font-semibold text-green-800 dark:text-green-300">Hồ sơ bắt buộc đã đủ!</div><div class="text-sm text-green-600 dark:text-green-400">Điền các biểu mẫu cần thiết.</div></div></div><button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-f">Điền biểu mẫu →</button></div>` : ""}
     `;
-    el.querySelectorAll(".check-item").forEach(item => item.addEventListener("click", () => { cl[item.dataset.check] = !cl[item.dataset.check]; saveChecklist(currentProcId, cl); renderChecklist(el, p); }));
+    el.querySelectorAll(".check-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            if (e.target.closest(".checklist-scan-btn")) return;
+            cl[item.dataset.check] = !cl[item.dataset.check];
+            saveChecklist(currentProcId, cl);
+            renderChecklist(el, p);
+        });
+    });
+    el.querySelectorAll(".checklist-scan-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const reqId = btn.dataset.reqId;
+            const docType = btn.dataset.docType;
+            openScanModal("personal", reqId, docType);
+        });
+    });
     const toF = el.querySelector("#btn-to-f");
     if (toF) toF.addEventListener("click", () => { currentTab = "forms"; renderWorkflowTabs(); renderTabContent(); });
 }
@@ -2586,9 +2724,19 @@ function renderFormCards(el) {
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4" style="box-shadow: var(--shadow-xs)">
             <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-1">Biểu mẫu cần điền</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Hệ thống hỏi từng câu và tự động điền vào biểu mẫu cho bạn.</p>
-            <div class="space-y-3">${resolvedWF.forms.map(fId => {
+            <div class="space-y-3">${resolvedWF.forms.map((fId, idx) => {
                 const f = FORMS[fId]; const done = filled[fId];
-                return `<button class="form-card-wf ${done ? 'filled' : ''}" data-fill="${fId}"><div><div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">${f.name}</div><div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${f.title}</div></div><div class="flex items-center gap-2 flex-shrink-0">${done ? '<span class="text-xs text-green-600 dark:text-green-400 font-medium">Đã điền ✓</span>' : '<span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Điền ngay →</span>'}</div></button>`;
+                return `<button class="form-card-wf ${done ? 'filled' : ''}" data-fill="${fId}">
+                    <div class="form-card-wf__index">${done ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : (idx + 1)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">${f.name}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${f.title}</div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        ${done ? '<span class="text-xs text-green-600 dark:text-green-400 font-medium">Đã điền</span>' : '<span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Điền ngay</span>'}
+                        <svg class="form-card-wf__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                </button>`;
             }).join("")}</div>
         </div>
         ${allFilled ? `<div class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="text-2xl">✅</span><div><div class="font-semibold text-green-800 dark:text-green-300">Đã điền tất cả biểu mẫu!</div><div class="text-sm text-green-600 dark:text-green-400">Xem hướng dẫn nộp hồ sơ.</div></div></div><button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all hover:shadow-md" id="btn-to-st">Hướng dẫn nộp →</button></div>` : ""}
@@ -2756,6 +2904,771 @@ function renderProfileBanner() {
         profileBanner.innerHTML = `<div class="flex items-center gap-3"><svg class="w-8 h-8 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div><div class="font-semibold text-gray-800 dark:text-gray-100">Chưa lưu thông tin cá nhân</div><div class="text-sm text-amber-700 dark:text-amber-400">Lưu họ tên, CCCD, địa chỉ... để tự động điền cho mọi biểu mẫu</div></div></div><button class="text-sm text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium whitespace-nowrap" id="banner-add">Thêm ngay</button>`;
         $("#banner-add").addEventListener("click", openProfileModal);
     }
+}
+
+// ================================================================
+// DOCUMENT OCR SCANNER
+// ================================================================
+let scanTargetTab = null;
+let scanImageFile = null;
+let scanWorker = null;
+let scanParsedData = null;
+let scanRequirementId = null;
+
+function loadUploadedDocs(procId) { try { return JSON.parse(localStorage.getItem(`udocs_${procId}`)) || {}; } catch { return {}; } }
+function saveUploadedDocs(procId, data) { localStorage.setItem(`udocs_${procId}`, JSON.stringify(data)); }
+
+const REQUIREMENT_DOC_TYPE_MAP = {
+    gcn: "gcn",
+    cmnd_ben_ban: "cccd", cmnd_ben_mua: "cccd", cmnd_vo_chong_ban: "cccd",
+    cmnd_ben_tang: "cccd", cmnd_ben_nhan: "cccd", cmnd_vo_chong: "cccd",
+    cmnd: "cccd",
+    hon_nhan_ban: "honnhan", hon_nhan_mua: "honnhan", hon_nhan_tang: "honnhan", hon_nhan: "honnhan",
+    dang_ky_ket_hon: "kethon",
+    ho_khau_ben_ban: "hokhau", ho_khau: "hokhau", so_ho_khau: "hokhau",
+    xac_nhan_cu_tru: "hokhau",
+    gpkd: "gpkd",
+    uy_quyen: "other",
+    giay_mien_thue: "other",
+};
+
+const MANUAL_INTAKE_FIELDS = {
+    mua_ban_bds: ["propertyType"],
+    tang_cho_bds: ["relationship"],
+    thua_ke_bds: ["inheritType", "relationship"],
+    the_chap_bds: ["propertyType", "loanPurpose"],
+    xoa_the_chap: [],
+    tach_thua_dat: ["splitOrMerge"],
+    cap_gcn_lan_dau: [],
+    chuyen_muc_dich_sdd: [],
+    cho_thue_bds: ["declarationType"],
+};
+
+function parseKetHon(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+    const nameMatch = t.match(/(?:[OÔ]ng|Anh)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|,|v[aà])/i);
+    if (nameMatch) { result.spouse1 = nameMatch[1].trim().toUpperCase(); confidence.spouse1 = "medium"; }
+    const name2Match = t.match(/(?:B[aà]|Ch[iị])[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|,|$)/i);
+    if (name2Match) { result.spouse2 = name2Match[1].trim().toUpperCase(); confidence.spouse2 = "medium"; }
+    const dateMatch = t.match(/(?:ng[aà]y\s*(?:đ[aă]ng\s*k[yý]|k[eế]t\s*h[oô]n))[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (dateMatch) { result.marriageDate = parseDateVN(dateMatch[1]); if (result.marriageDate) confidence.marriageDate = "medium"; }
+    result._docType = "kethon";
+    result._maritalStatus = "married";
+    result._confidence = confidence;
+    return result;
+}
+
+function parseHonNhan(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+    const nameMatch = t.match(/(?:H[oọ]\s*(?:v[aà]\s*)?t[eê]n|[OÔ]ng|B[aà])[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|,|$)/i);
+    if (nameMatch) { result.name = nameMatch[1].trim().toUpperCase(); confidence.name = "medium"; }
+    const singleMatch = t.match(/(?:ch[uư]a\s*(?:đ[aă]ng\s*k[yý]\s*)?k[eế]t\s*h[oô]n|độc\s*th[aâ]n|single)/i);
+    const marriedMatch = t.match(/(?:đ[aã]\s*(?:đ[aă]ng\s*k[yý]\s*)?k[eế]t\s*h[oô]n|có\s*(?:vợ|ch[oồ]ng)|married)/i);
+    if (singleMatch) { result._maritalStatus = "single"; confidence._maritalStatus = "high"; }
+    else if (marriedMatch) { result._maritalStatus = "married"; confidence._maritalStatus = "high"; }
+    result._docType = "honnhan";
+    result._confidence = confidence;
+    return result;
+}
+
+function parseHoKhau(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+    const addrMatch = t.match(/(?:đ[iị]a\s*ch[iỉ]|th[uư][oờ]ng\s*tr[uú]|nơi\s*đ[aă]ng\s*k[yý])[:\s]*(.+?)(?:\n|$)/i);
+    if (addrMatch) { result.address = addrMatch[1].trim(); confidence.address = "medium"; }
+    const nameMatch = t.match(/(?:ch[uủ]\s*h[oộ]|H[oọ]\s*(?:v[aà]\s*)?t[eê]n)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|,|$)/i);
+    if (nameMatch) { result.name = nameMatch[1].trim().toUpperCase(); confidence.name = "medium"; }
+    const provinceMatch = t.match(/(?:t[iỉ]nh|th[aà]nh\s*ph[oố]|TP\.?)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s\.]+?)(?:\n|,|$)/i);
+    if (provinceMatch) { result.province = provinceMatch[1].trim(); confidence.province = "low"; }
+    result._docType = "hokhau";
+    result._confidence = confidence;
+    return result;
+}
+
+function inferIntakeFromDocuments(procedure, docs) {
+    const inferred = {};
+    const reasons = {};
+
+    for (const [reqId, docData] of Object.entries(docs)) {
+        if (!docData || !docData.ocrData) continue;
+        const ocr = docData.ocrData;
+
+        if (reqId === "dang_ky_ket_hon" || ocr._docType === "kethon") {
+            inferred.sellerMarital = "married";
+            inferred.borrowerMarital = "married";
+            inferred.ownerMarital = "married";
+            reasons.sellerMarital = "từ Giấy đăng ký kết hôn";
+        }
+        if (reqId === "hon_nhan_ban" || reqId === "hon_nhan" || ocr._docType === "honnhan") {
+            if (ocr._maritalStatus === "single") {
+                inferred.sellerMarital = "single";
+                reasons.sellerMarital = "từ Giấy xác nhận hôn nhân";
+            } else if (ocr._maritalStatus === "married") {
+                inferred.sellerMarital = "married";
+                reasons.sellerMarital = "từ Giấy xác nhận hôn nhân";
+            }
+        }
+        if (reqId === "cmnd_vo_chong_ban" || reqId === "cmnd_vo_chong") {
+            inferred.assetType = "shared";
+            reasons.assetType = "từ CCCD vợ/chồng";
+        }
+        if (reqId === "gpkd") {
+            inferred.buyerType = "to_chuc";
+            reasons.buyerType = "từ Giấy phép kinh doanh";
+        }
+        if (reqId === "uy_quyen") {
+            inferred.hasProxy = "yes";
+            reasons.hasProxy = "từ Giấy ủy quyền";
+        }
+    }
+
+    if (!inferred.buyerType && (docs.cmnd_ben_mua || docs.cmnd_ben_nhan)) {
+        inferred.buyerType = "ca_nhan";
+        reasons.buyerType = "từ CCCD bên mua";
+    }
+
+    if (!inferred.hasProxy) {
+        inferred.hasProxy = "no";
+    }
+
+    const buyerAddr = docs.cmnd_ben_mua?.ocrData?.address || docs.cmnd_ben_nhan?.ocrData?.address || "";
+    const propAddr = docs.gcn?.ocrData?.address || "";
+    if (buyerAddr && propAddr) {
+        const sameP = fuzzyProvinceMatch(buyerAddr, propAddr);
+        inferred.sameProvince = sameP ? "yes" : "no";
+        reasons.sameProvince = "so sánh địa chỉ CCCD và GCN";
+    }
+
+    inferred._reasons = reasons;
+    return inferred;
+}
+
+function fuzzyProvinceMatch(addr1, addr2) {
+    const normalize = s => s.toLowerCase()
+        .replace(/tp\.?\s*/g, "thành phố ")
+        .replace(/t\.\s*/g, "tỉnh ")
+        .replace(/\s+/g, " ").trim();
+    const provinces = ["hà nội", "hồ chí minh", "đà nẵng", "hải phòng", "cần thơ",
+        "bình dương", "đồng nai", "long an", "bà rịa", "khánh hòa", "quảng ninh",
+        "thanh hóa", "nghệ an", "hà tĩnh", "thừa thiên", "quảng nam", "bình định",
+        "lâm đồng", "bắc ninh", "hải dương", "hưng yên", "vĩnh phúc", "thái nguyên"];
+    const a1 = normalize(addr1);
+    const a2 = normalize(addr2);
+    for (const p of provinces) {
+        const in1 = a1.includes(p);
+        const in2 = a2.includes(p);
+        if (in1 && in2) return true;
+        if (in1 || in2) return false;
+    }
+    return false;
+}
+
+const SCAN_DOC_TYPES = {
+    cccd: { label: "CCCD / CMND", parser: "parseCCCD", fields: [
+        { key: "name", label: "Họ và tên", profileKey: { personal: "name", party2: "party2_name" } },
+        { key: "idNumber", label: "Số CCCD/CMND", profileKey: { personal: "idNumber", party2: "party2_idNumber" } },
+        { key: "birthYear", label: "Năm sinh", profileKey: { personal: "birthYear", party2: "party2_birthYear" } },
+        { key: "address", label: "Nơi thường trú", profileKey: { personal: "address", party2: "party2_address" } },
+        { key: "idIssuedDate", label: "Ngày cấp", inputType: "date", profileKey: { personal: "idIssuedDate", party2: "party2_idDate" } },
+        { key: "idIssuedPlace", label: "Nơi cấp", profileKey: { personal: "idIssuedPlace", party2: "party2_idPlace" } },
+    ]},
+    passport: { label: "Hộ chiếu", parser: "parsePassport", fields: [
+        { key: "name", label: "Họ và tên", profileKey: { personal: "name", party2: "party2_name" } },
+        { key: "idNumber", label: "Số hộ chiếu", profileKey: { personal: "idNumber", party2: "party2_idNumber" } },
+        { key: "birthYear", label: "Năm sinh", profileKey: { personal: "birthYear", party2: "party2_birthYear" } },
+        { key: "idIssuedDate", label: "Ngày cấp", inputType: "date", profileKey: { personal: "idIssuedDate", party2: "party2_idDate" } },
+        { key: "idIssuedPlace", label: "Nơi cấp", profileKey: { personal: "idIssuedPlace", party2: "party2_idPlace" } },
+    ]},
+    gcn: { label: "GCN Quyền sử dụng đất", parser: "parseGCN", fields: [
+        { key: "gcnNumber", label: "Số GCN", profileKey: { property: "prop_gcnNumber" } },
+        { key: "parcelNumber", label: "Thửa đất số", profileKey: { property: "prop_parcelNumber" } },
+        { key: "mapNumber", label: "Tờ bản đồ số", profileKey: { property: "prop_mapNumber" } },
+        { key: "landArea", label: "Diện tích (m²)", profileKey: { property: "prop_landArea" } },
+        { key: "address", label: "Địa chỉ BĐS", profileKey: { property: "prop_address" } },
+        { key: "ownerName", label: "Chủ sử dụng", profileKey: { personal: "name" } },
+    ]},
+    gpkd: { label: "Giấy phép kinh doanh", parser: "parseGPKD", fields: [
+        { key: "name", label: "Tên doanh nghiệp / cá nhân", profileKey: { personal: "name" } },
+        { key: "taxCode", label: "Mã số thuế", profileKey: { personal: "taxCode" } },
+        { key: "address", label: "Địa chỉ", profileKey: { personal: "address" } },
+        { key: "phone", label: "Điện thoại", profileKey: { personal: "phone" } },
+    ]},
+    hokhau: { label: "Sổ hộ khẩu", parser: "parseHoKhau", fields: [
+        { key: "name", label: "Chủ hộ", profileKey: { personal: "name", party2: "party2_name" } },
+        { key: "address", label: "Địa chỉ thường trú", profileKey: { personal: "address", party2: "party2_address" } },
+        { key: "province", label: "Tỉnh/Thành phố", profileKey: { personal: "province" } },
+    ]},
+    kethon: { label: "Giấy đăng ký kết hôn", parser: "parseKetHon", fields: [
+        { key: "spouse1", label: "Ông/Anh" },
+        { key: "spouse2", label: "Bà/Chị" },
+        { key: "marriageDate", label: "Ngày đăng ký", inputType: "date" },
+    ]},
+    honnhan: { label: "Giấy xác nhận tình trạng hôn nhân", parser: "parseHonNhan", fields: [
+        { key: "name", label: "Họ và tên", profileKey: { personal: "name", party2: "party2_name" } },
+    ]},
+    other: { label: "Giấy tờ khác", parser: "parseGeneric", fields: "generic" },
+};
+
+const GENERIC_FIELDS = [
+    { key: "name", label: "Họ và tên", profileKey: { personal: "name", party2: "party2_name" } },
+    { key: "idNumber", label: "Số CCCD/CMND", profileKey: { personal: "idNumber", party2: "party2_idNumber" } },
+    { key: "birthYear", label: "Năm sinh", profileKey: { personal: "birthYear", party2: "party2_birthYear" } },
+    { key: "address", label: "Địa chỉ", profileKey: { personal: "address", party2: "party2_address" } },
+    { key: "phone", label: "Điện thoại", profileKey: { personal: "phone", party2: "party2_phone" } },
+    { key: "taxCode", label: "Mã số thuế", profileKey: { personal: "taxCode" } },
+    { key: "date1", label: "Ngày (tìm thấy)", inputType: "date" },
+    { key: "rawText", label: "Nội dung nhận dạng (thô)", inputType: "textarea" },
+];
+
+async function getOcrWorker() {
+    if (scanWorker) return scanWorker;
+    const worker = await Tesseract.createWorker("vie+eng", 1, {
+        logger: m => {
+            if (m.status === "recognizing text") {
+                const pct = Math.round(m.progress * 100);
+                const bar = $("#scan-progress-bar");
+                const pctEl = $("#scan-progress-pct");
+                const textEl = $("#scan-progress-text");
+                if (bar) bar.style.width = pct + "%";
+                if (pctEl) pctEl.textContent = pct + "%";
+                if (textEl) textEl.textContent = "Đang nhận dạng văn bản...";
+            } else if (m.status === "loading language traineddata") {
+                const sub = $("#scan-progress-sub");
+                if (sub) sub.textContent = "Đang tải dữ liệu ngôn ngữ tiếng Việt (chỉ cần 1 lần)...";
+            }
+        }
+    });
+    scanWorker = worker;
+    return worker;
+}
+
+function preprocessImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxW = 2000;
+            const scale = img.width > maxW ? maxW / img.width : 1;
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                const contrast = ((gray - 128) * 1.3) + 128;
+                const val = Math.max(0, Math.min(255, contrast));
+                data[i] = data[i + 1] = data[i + 2] = val;
+            }
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob(blob => resolve(blob), "image/png");
+            URL.revokeObjectURL(img.src);
+        };
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function normalizeVietnamese(text) {
+    return text
+        .replace(/[''`]/g, "'")
+        .replace(/[""]/g, '"')
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function parseDateVN(str) {
+    if (!str) return null;
+    const m = str.match(/(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{4})/);
+    if (m) {
+        const d = m[1].padStart(2, "0");
+        const mo = m[2].padStart(2, "0");
+        return `${m[3]}-${mo}-${d}`;
+    }
+    return null;
+}
+
+function parseCCCD(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+
+    const idMatch = t.match(/(?:S[oố]|No\.?)[:\s.]*(\d{9,12})/i) || t.match(/(\d{12})/);
+    if (idMatch) { result.idNumber = idMatch[1]; confidence.idNumber = "high"; }
+
+    const nameMatch = t.match(/(?:H[oọ]\s*(?:v[aà]\s*)?t[eê]n|Full\s*name)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|$)/i);
+    if (nameMatch) {
+        result.name = nameMatch[1].trim().toUpperCase();
+        confidence.name = result.name.length > 2 ? "high" : "low";
+    }
+
+    const dobMatch = t.match(/(?:Ng[aà]y\s*(?:,?\s*th[aá]ng\s*,?\s*n[aă]m)?\s*sinh|Date\s*of\s*birth)[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (dobMatch) {
+        const parsed = parseDateVN(dobMatch[1]);
+        if (parsed) {
+            result.birthYear = parsed.substring(0, 4);
+            confidence.birthYear = "high";
+        }
+    }
+
+    const addrMatch = t.match(/(?:N[oơ]i\s*th[uư][oờ]ng\s*tr[uú]|Place\s*of\s*residence)[:\s]*(.+?)(?:\n|$)/i);
+    if (addrMatch) {
+        result.address = addrMatch[1].trim();
+        confidence.address = result.address.length > 5 ? "high" : "low";
+    }
+
+    const issueDateMatch = t.match(/(?:Ng[aà]y\s*c[aấ]p|Date\s*of\s*issue)[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (issueDateMatch) {
+        result.idIssuedDate = parseDateVN(issueDateMatch[1]);
+        if (result.idIssuedDate) confidence.idIssuedDate = "high";
+    }
+
+    const placeMatch = t.match(/(?:C[uụ]c\s*(?:CS\s*)?(?:QLHC|qu[aả]n\s*l[yý]).*|(?:C[oô]ng\s*an|CA)\s*(?:t[iỉ]nh|TP|th[aà]nh\s*ph[oố]).*)/i);
+    if (placeMatch) {
+        result.idIssuedPlace = placeMatch[0].trim();
+        confidence.idIssuedPlace = "medium";
+    }
+
+    result._confidence = confidence;
+    return result;
+}
+
+function parsePassport(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+
+    const mrzMatch = t.match(/P<VNM([A-Z<]+)<<([A-Z<]+)/);
+    if (mrzMatch) {
+        const surname = mrzMatch[1].replace(/</g, " ").trim();
+        const given = mrzMatch[2].replace(/</g, " ").trim();
+        result.name = (surname + " " + given).trim();
+        confidence.name = "high";
+    }
+
+    const passMatch = t.match(/(?:S[oố]\s*(?:h[oộ]\s*chi[eế]u|HC)|Passport\s*No\.?)[:\s.]*([A-Z]\d{7,8})/i);
+    if (passMatch) { result.idNumber = passMatch[1]; confidence.idNumber = "high"; }
+
+    if (!result.name) {
+        const nameMatch = t.match(/(?:H[oọ]\s*(?:v[aà]\s*)?t[eê]n|Surname|Given\s*name)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|$)/i);
+        if (nameMatch) { result.name = nameMatch[1].trim().toUpperCase(); confidence.name = "medium"; }
+    }
+
+    const dobMatch = t.match(/(?:Ng[aà]y\s*sinh|Date\s*of\s*birth)[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (dobMatch) {
+        const parsed = parseDateVN(dobMatch[1]);
+        if (parsed) { result.birthYear = parsed.substring(0, 4); confidence.birthYear = "high"; }
+    }
+
+    const issueDateMatch = t.match(/(?:Ng[aà]y\s*c[aấ]p|Date\s*of\s*issue)[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (issueDateMatch) {
+        result.idIssuedDate = parseDateVN(issueDateMatch[1]);
+        if (result.idIssuedDate) confidence.idIssuedDate = "high";
+    }
+
+    const placeMatch = t.match(/(?:N[oơ]i\s*c[aấ]p|Place\s*of\s*issue)[:\s]*(.+?)(?:\n|$)/i);
+    if (placeMatch) { result.idIssuedPlace = placeMatch[1].trim(); confidence.idIssuedPlace = "medium"; }
+
+    result._confidence = confidence;
+    return result;
+}
+
+function parseGCN(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+
+    const gcnMatch = t.match(/(?:S[oố]\s*(?:v[aà]o\s*s[oổ]|GCN|ph[aá]t\s*h[aà]nh))[:\s]*([A-ZĐ]{1,3}\s*\d{4,8})/i);
+    if (gcnMatch) { result.gcnNumber = gcnMatch[1].trim(); confidence.gcnNumber = "high"; }
+
+    const parcelMatch = t.match(/(?:Th[uử]a\s*(?:đ[aấ]t\s*)?s[oố]|Th[uư][aả]\s*s[oố])[:\s]*(\d+)/i);
+    if (parcelMatch) { result.parcelNumber = parcelMatch[1]; confidence.parcelNumber = "high"; }
+
+    const mapMatch = t.match(/(?:T[oờ]\s*(?:b[aả]n\s*đ[oồ]\s*)?s[oố])[:\s]*(\d+)/i);
+    if (mapMatch) { result.mapNumber = mapMatch[1]; confidence.mapNumber = "high"; }
+
+    const areaMatch = t.match(/(?:Di[eệ]n\s*t[ií]ch)[:\s]*(\d+[.,]?\d*)\s*m/i) || t.match(/(\d+[.,]?\d*)\s*m[²2]/);
+    if (areaMatch) { result.landArea = areaMatch[1].replace(",", "."); confidence.landArea = "high"; }
+
+    const addrMatch = t.match(/(?:T[aạ]i|Đ[iị]a\s*ch[iỉ])[:\s]*(.+?)(?:\n|$)/i);
+    if (addrMatch) { result.address = addrMatch[1].trim(); confidence.address = result.address.length > 5 ? "high" : "low"; }
+
+    const ownerMatch = t.match(/(?:Ng[uư][oờ]i\s*s[uử]\s*d[uụ]ng|Ch[uủ]\s*s[oở]\s*h[uữ]u|H[oọ]\s*(?:v[aà]\s*)?t[eê]n)[:\s]*([A-ZÀ-Ỹa-zà-ỹ\s]+?)(?:\n|$)/i);
+    if (ownerMatch) { result.ownerName = ownerMatch[1].trim().toUpperCase(); confidence.ownerName = "medium"; }
+
+    result._confidence = confidence;
+    return result;
+}
+
+function parseGPKD(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+
+    const nameMatch = t.match(/(?:T[eê]n\s*(?:doanh\s*nghi[eệ]p|c[oơ]\s*s[oở]|c[aá]\s*nh[aâ]n)|H[oọ]\s*(?:v[aà]\s*)?t[eê]n)[:\s]*(.+?)(?:\n|$)/i);
+    if (nameMatch) { result.name = nameMatch[1].trim(); confidence.name = "high"; }
+
+    const taxMatch = t.match(/(?:M[aã]\s*s[oố]\s*(?:thu[eế]|DN)|MST)[:\s]*(\d[\d\s\-]{8,14})/i);
+    if (taxMatch) { result.taxCode = taxMatch[1].replace(/[\s\-]/g, ""); confidence.taxCode = "high"; }
+
+    const addrMatch = t.match(/(?:Đ[iị]a\s*ch[iỉ]|Tr[uụ]\s*s[oở])[:\s]*(.+?)(?:\n|$)/i);
+    if (addrMatch) { result.address = addrMatch[1].trim(); confidence.address = "medium"; }
+
+    const phoneMatch = t.match(/(?:Đi[eệ]n\s*tho[aạ]i|ĐT|Tel)[:\s]*(0\d[\d\s\.\-]{7,12})/i);
+    if (phoneMatch) { result.phone = phoneMatch[1].replace(/[\s\.\-]/g, ""); confidence.phone = "high"; }
+
+    result._confidence = confidence;
+    return result;
+}
+
+function parseGeneric(text) {
+    const t = normalizeVietnamese(text);
+    const result = {};
+    const confidence = {};
+
+    const idMatch = t.match(/(\d{12})/) || t.match(/(\d{9})/);
+    if (idMatch) { result.idNumber = idMatch[1]; confidence.idNumber = "low"; }
+
+    const nameMatch = t.match(/(?:H[oọ]\s*(?:v[aà]\s*)?t[eê]n|[OÔ]ng|B[aà])[:\s]*([A-ZÀ-Ỹ][A-ZÀ-Ỹa-zà-ỹ\s]{2,40})(?:\n|,|$)/i);
+    if (nameMatch) { result.name = nameMatch[1].trim().toUpperCase(); confidence.name = "medium"; }
+
+    const dobMatch = t.match(/(?:sinh\s*(?:ng[aà]y)?|n[aă]m\s*sinh)[:\s,]*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/i);
+    if (dobMatch) {
+        const parsed = parseDateVN(dobMatch[1]);
+        if (parsed) { result.birthYear = parsed.substring(0, 4); confidence.birthYear = "medium"; }
+    }
+
+    const addrMatch = t.match(/(?:đ[iị]a\s*ch[iỉ]|th[uư][oờ]ng\s*tr[uú]|nơi\s*[oở])[:\s]*(.+?)(?:\n|$)/i);
+    if (addrMatch) { result.address = addrMatch[1].trim(); confidence.address = "low"; }
+
+    const phoneMatch = t.match(/(0\d{9,10})/);
+    if (phoneMatch) { result.phone = phoneMatch[1]; confidence.phone = "medium"; }
+
+    const taxMatch = t.match(/(?:MST|m[aã]\s*s[oố]\s*thu[eế])[:\s]*(\d{10,13})/i);
+    if (taxMatch) { result.taxCode = taxMatch[1]; confidence.taxCode = "medium"; }
+
+    const dateMatch = t.match(/(?:ng[aà]y|Ng[aà]y)\s*(\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{4})/);
+    if (dateMatch) {
+        result.date1 = parseDateVN(dateMatch[1]);
+        if (result.date1) confidence.date1 = "low";
+    }
+
+    result.rawText = text.trim();
+    confidence.rawText = "high";
+
+    result._confidence = confidence;
+    return result;
+}
+
+const DOC_PARSERS = { parseCCCD, parsePassport, parseGCN, parseGPKD, parseGeneric, parseKetHon, parseHonNhan, parseHoKhau };
+
+function getScanFields(docType) {
+    const dt = SCAN_DOC_TYPES[docType];
+    if (!dt) return GENERIC_FIELDS;
+    return dt.fields === "generic" ? GENERIC_FIELDS : dt.fields;
+}
+
+function mapScanToProfile(docType, data, targetTab) {
+    const fields = getScanFields(docType);
+    const mapping = {};
+    for (const f of fields) {
+        if (!data[f.key] || !f.profileKey) continue;
+        const pk = f.profileKey[targetTab] || f.profileKey.personal || f.profileKey.property;
+        if (pk) mapping[pk] = data[f.key];
+    }
+    return mapping;
+}
+
+function openScanModal(targetTab, requirementId, docType) {
+    if (typeof Tesseract === "undefined") {
+        showToast("Thư viện nhận dạng chưa tải xong. Vui lòng thử lại.", "error");
+        return;
+    }
+    scanTargetTab = targetTab;
+    scanRequirementId = requirementId || null;
+    scanImageFile = null;
+    scanParsedData = null;
+
+    const modal = $("#scan-modal");
+    modal.classList.remove("hidden");
+    showScanStep("capture");
+
+    const docSelect = $("#scan-doc-type");
+    if (docType && SCAN_DOC_TYPES[docType]) {
+        docSelect.value = docType;
+        docSelect.closest(".scan-doc-section").classList.toggle("hidden", !!requirementId);
+    } else if (targetTab === "property") {
+        docSelect.value = "gcn";
+        docSelect.closest(".scan-doc-section").classList.remove("hidden");
+    } else {
+        docSelect.value = "cccd";
+        docSelect.closest(".scan-doc-section").classList.remove("hidden");
+    }
+}
+
+function closeScanModal() {
+    const modal = $("#scan-modal");
+    modal.classList.add("hidden");
+    scanImageFile = null;
+    scanParsedData = null;
+    scanRequirementId = null;
+    const camera = $("#scan-input-camera");
+    const gallery = $("#scan-input-gallery");
+    if (camera) camera.value = "";
+    if (gallery) gallery.value = "";
+    const docSection = $(".scan-doc-section");
+    if (docSection) docSection.classList.remove("hidden");
+}
+
+function showScanStep(stepId) {
+    document.querySelectorAll(".scan-step").forEach(s => s.classList.add("hidden"));
+    const target = $(`#scan-step-${stepId}`);
+    if (target) target.classList.remove("hidden");
+}
+
+function onScanImageSelected(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    scanImageFile = file;
+    const preview = $("#scan-preview-img");
+    if (preview) {
+        const url = URL.createObjectURL(file);
+        preview.onload = () => URL.revokeObjectURL(url);
+        preview.src = url;
+    }
+    showScanStep("preview");
+}
+
+async function onStartOcr() {
+    if (!scanImageFile) return;
+    showScanStep("processing");
+
+    const bar = $("#scan-progress-bar");
+    const pctEl = $("#scan-progress-pct");
+    const textEl = $("#scan-progress-text");
+    const subEl = $("#scan-progress-sub");
+    if (bar) bar.style.width = "0%";
+    if (pctEl) pctEl.textContent = "0%";
+    if (textEl) textEl.textContent = "Đang xử lý ảnh...";
+    if (subEl) subEl.textContent = "";
+
+    try {
+        const processed = await preprocessImage(scanImageFile);
+        if (textEl) textEl.textContent = "Đang nhận dạng văn bản...";
+
+        const worker = await getOcrWorker();
+        const { data } = await worker.recognize(processed);
+        const rawText = data.text || "";
+
+        const docType = $("#scan-doc-type").value;
+        const parserName = SCAN_DOC_TYPES[docType]?.parser || "parseGeneric";
+        const parser = DOC_PARSERS[parserName] || parseGeneric;
+        scanParsedData = parser(rawText);
+
+        renderScanReview(docType);
+    } catch (err) {
+        showScanStep("review");
+        const fields = $("#scan-review-fields");
+        if (fields) fields.innerHTML = "";
+        const empty = $("#scan-review-empty");
+        if (empty) empty.classList.remove("hidden");
+        const applyBtn = $("#btn-scan-apply");
+        if (applyBtn) applyBtn.disabled = true;
+    }
+}
+
+function renderScanReview(docType) {
+    showScanStep("review");
+    const container = $("#scan-review-fields");
+    const emptyEl = $("#scan-review-empty");
+    const applyBtn = $("#btn-scan-apply");
+
+    if (!scanParsedData || Object.keys(scanParsedData).filter(k => k !== "_confidence" && k !== "rawText").length === 0) {
+        if (container) container.innerHTML = "";
+        if (emptyEl) emptyEl.classList.remove("hidden");
+        if (applyBtn) applyBtn.disabled = true;
+        return;
+    }
+
+    if (emptyEl) emptyEl.classList.add("hidden");
+    if (applyBtn) applyBtn.disabled = false;
+
+    const fields = getScanFields(docType);
+    const conf = scanParsedData._confidence || {};
+    let html = "";
+
+    for (const f of fields) {
+        const val = scanParsedData[f.key] || "";
+        if (!val && f.key !== "rawText") continue;
+        const isLow = conf[f.key] === "low" || conf[f.key] === "medium";
+        const lowClass = isLow ? "scan-review-field--low" : "";
+        const tag = f.key === "rawText" ? "textarea" : "input";
+        const inputType = f.inputType || "text";
+
+        if (f.key === "rawText") {
+            html += `<div class="scan-review-field ${lowClass}">
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">${f.label}</label>
+                <textarea class="form-input text-xs" data-scan-key="${f.key}" rows="4" readonly>${escapeHtml(val)}</textarea>
+            </div>`;
+        } else {
+            html += `<div class="scan-review-field ${lowClass}">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    ${f.label}
+                    ${isLow ? '<span class="text-amber-500 text-xs ml-1">(kiểm tra lại)</span>' : '<span class="text-emerald-500 text-xs ml-1">✓</span>'}
+                </label>
+                <input type="${inputType}" class="form-input" data-scan-key="${f.key}" value="${escapeHtml(val)}">
+            </div>`;
+        }
+    }
+
+    if (container) container.innerHTML = html;
+}
+
+function onApplyScanResults() {
+    const reviewFields = document.querySelectorAll("#scan-review-fields [data-scan-key]");
+    const data = {};
+    reviewFields.forEach(el => {
+        const key = el.dataset.scanKey;
+        const val = (el.value || "").trim();
+        if (val && key !== "rawText") data[key] = val;
+    });
+
+    if (Object.keys(data).length === 0) {
+        showToast("Không có thông tin để áp dụng.", "info");
+        closeScanModal();
+        return;
+    }
+
+    const docType = $("#scan-doc-type").value;
+    const reqId = scanRequirementId;
+
+    const mapping = mapScanToProfile(docType, data, scanTargetTab);
+    const pr = loadProfile();
+    let filledCount = 0;
+    for (const [profileKey, value] of Object.entries(mapping)) {
+        if (value) {
+            pr[profileKey] = value;
+            filledCount++;
+        }
+    }
+    saveProfile(pr);
+
+    const profileModalEl = $("#profile-modal");
+    if (profileModalEl && !profileModalEl.classList.contains("hidden")) {
+        for (const [profileKey, value] of Object.entries(mapping)) {
+            const input = profileModalEl.querySelector(`[data-profile="${profileKey}"]`);
+            if (input && value) {
+                input.value = value;
+                input.classList.add("is-autofilled");
+            }
+        }
+        updateProfileTabBadges();
+    }
+
+    if (reqId && currentProcId) {
+        uploadedDocuments[reqId] = { ocrData: { ...data, ...scanParsedData }, docType, timestamp: Date.now() };
+        saveUploadedDocs(currentProcId, uploadedDocuments);
+
+        const cl = loadChecklist(currentProcId);
+        cl[reqId] = true;
+        saveChecklist(currentProcId, cl);
+
+        const p = PROCEDURES[currentProcId];
+        const inferred = inferIntakeFromDocuments(p, uploadedDocuments);
+        const reasons = inferred._reasons || {};
+        delete inferred._reasons;
+        let inferredChanges = [];
+        for (const [k, v] of Object.entries(inferred)) {
+            if (!intakeContext[k] || intakeContext["_auto_" + k]) {
+                if (intakeContext[k] !== v) {
+                    const q = p.intake.find(iq => iq.id === k);
+                    const opt = q?.options.find(o => o.value === v);
+                    if (opt) inferredChanges.push(opt.label);
+                }
+                intakeContext[k] = v;
+                intakeContext["_auto_" + k] = true;
+            }
+        }
+        saveIntakeContext(currentProcId, intakeContext);
+
+        if (isIntakeComplete(p, intakeContext)) {
+            resolvedWF = resolveWorkflow(p, intakeContext);
+        }
+        renderWorkflowTabs();
+        renderTabContent();
+        renderProfileBanner();
+
+        const docLabel = SCAN_DOC_TYPES[docType]?.label || "giấy tờ";
+        const inferText = inferredChanges.length > 0 ? ` Phát hiện: ${inferredChanges.join(", ")}` : "";
+        closeScanModal();
+        showToast(`Đã nhận dạng ${docLabel}. ${filledCount} trường đã lưu.${inferText}`, "success");
+    } else {
+        closeScanModal();
+        renderProfileBanner();
+        const docLabel = SCAN_DOC_TYPES[docType]?.label || "giấy tờ";
+        if (filledCount > 0) {
+            showToast(`Đã lưu ${filledCount} thông tin từ ${docLabel}`, "success");
+        } else {
+            showToast("Không tìm thấy trường phù hợp để điền.", "info");
+        }
+        updateProfileTabBadges();
+    }
+}
+
+function initDocScanner() {
+    document.querySelectorAll(".scan-doc-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tab = btn.dataset.scanTab;
+            if (tab) openScanModal(tab);
+        });
+    });
+
+    const scanOverlay = $("#scan-overlay");
+    if (scanOverlay) scanOverlay.addEventListener("click", closeScanModal);
+
+    document.querySelectorAll(".scan-close-btn").forEach(btn => {
+        btn.addEventListener("click", closeScanModal);
+    });
+
+    const cameraInput = $("#scan-input-camera");
+    const galleryInput = $("#scan-input-gallery");
+    if (cameraInput) cameraInput.addEventListener("change", (e) => {
+        if (e.target.files[0]) onScanImageSelected(e.target.files[0]);
+    });
+    if (galleryInput) galleryInput.addEventListener("change", (e) => {
+        if (e.target.files[0]) onScanImageSelected(e.target.files[0]);
+    });
+
+    const retakeBtn = $("#btn-scan-retake");
+    if (retakeBtn) retakeBtn.addEventListener("click", () => {
+        scanImageFile = null;
+        showScanStep("capture");
+        const camera = $("#scan-input-camera");
+        const gallery = $("#scan-input-gallery");
+        if (camera) camera.value = "";
+        if (gallery) gallery.value = "";
+    });
+
+    const startBtn = $("#btn-scan-start");
+    if (startBtn) startBtn.addEventListener("click", onStartOcr);
+
+    const retryBtn = $("#btn-scan-retry");
+    if (retryBtn) retryBtn.addEventListener("click", () => {
+        scanImageFile = null;
+        scanParsedData = null;
+        showScanStep("capture");
+        const camera = $("#scan-input-camera");
+        const gallery = $("#scan-input-gallery");
+        if (camera) camera.value = "";
+        if (gallery) gallery.value = "";
+    });
+
+    const applyBtn = $("#btn-scan-apply");
+    if (applyBtn) applyBtn.addEventListener("click", onApplyScanResults);
 }
 
 // ================================================================
