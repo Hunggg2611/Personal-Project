@@ -1,0 +1,388 @@
+:root {
+    --sage-50: #f5f7f4;
+    --sage-100: #eef2ec;
+    --sage-200: #c8d5c3;
+    --sage-300: #a3c098;
+    --sage-400: #7c9a72;
+    --sage-500: #6b8a62;
+    --sage-600: #5a7a52;
+    --sage-700: #3a4538;
+    --sage-800: #242b24;
+    --sage-900: #1a1f1a;
+    --text: #3d4a3b;
+    --text-light: #d4ddd0;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+    --transition: 0.2s ease;
+}
+
+/* ── Glass nav ── */
+.nav-glass {
+    background: rgba(245, 247, 244, 0.78);
+    backdrop-filter: blur(16px) saturate(180%);
+    border-color: rgba(200, 213, 195, 0.5);
+}
+.dark .nav-glass {
+    background: rgba(26, 31, 26, 0.78);
+    border-color: rgba(58, 69, 56, 0.4);
+}
+
+/* ── Nav tabs ── */
+.nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 3rem;
+    min-height: 3rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-lg);
+    color: var(--sage-400);
+    transition: color var(--transition), background var(--transition);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+.nav-tab:hover {
+    background: rgba(124, 154, 114, 0.08);
+}
+.nav-tab--active {
+    color: var(--sage-600);
+    background: rgba(124, 154, 114, 0.12);
+}
+.dark .nav-tab {
+    color: var(--sage-300);
+}
+.dark .nav-tab--active {
+    color: var(--sage-300);
+    background: rgba(163, 192, 152, 0.15);
+}
+.nav-tab__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+.nav-tab__label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* ── Quick action cards ── */
+.quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 0.75rem;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--sage-200);
+    background: white;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+}
+.quick-action:hover {
+    border-color: var(--sage-400);
+    box-shadow: 0 4px 12px rgba(124, 154, 114, 0.1);
+    transform: translateY(-2px);
+}
+.quick-action__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sage-100);
+    color: var(--sage-400);
+}
+.quick-action__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.dark .quick-action {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+}
+.dark .quick-action:hover {
+    border-color: var(--sage-400);
+    box-shadow: 0 4px 12px rgba(124, 154, 114, 0.15);
+}
+.dark .quick-action__icon {
+    background: rgba(163, 192, 152, 0.12);
+    color: var(--sage-300);
+}
+.dark .quick-action__label {
+    color: var(--text-light);
+}
+
+/* ── Fog / Energy level buttons ── */
+.level-btn {
+    flex: 1;
+    padding: 0.5rem 0.25rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--sage-200);
+    background: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+    min-height: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+}
+.level-btn:hover {
+    border-color: var(--sage-400);
+}
+.level-btn--selected {
+    background: var(--sage-400);
+    border-color: var(--sage-400);
+    color: white;
+}
+.level-btn__num {
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.dark .level-btn {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+    color: var(--text-light);
+}
+.dark .level-btn--selected {
+    background: var(--sage-300);
+    border-color: var(--sage-300);
+    color: var(--sage-900);
+}
+
+/* ── Fog timeline entry ── */
+.fog-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    background: white;
+    border: 1px solid var(--sage-200);
+}
+.fog-entry__time {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--sage-400);
+    min-width: 4.5rem;
+}
+.fog-entry__levels {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1;
+}
+.fog-entry__badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+.fog-entry__note {
+    font-size: 0.75rem;
+    color: var(--text);
+    opacity: 0.7;
+}
+.dark .fog-entry {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+}
+.dark .fog-entry__note {
+    color: var(--text-light);
+}
+
+/* ── Task steps ── */
+.task-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    background: white;
+    border: 1px solid var(--sage-200);
+    transition: all var(--transition);
+}
+.task-step--done {
+    opacity: 0.5;
+}
+.task-step--done .task-step__text {
+    text-decoration: line-through;
+}
+.task-step__check {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 2px solid var(--sage-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    background: transparent;
+    padding: 0;
+}
+.task-step__check:hover {
+    border-color: var(--sage-400);
+}
+.task-step--done .task-step__check {
+    background: var(--sage-400);
+    border-color: var(--sage-400);
+}
+.task-step__text {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+.dark .task-step {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+}
+.dark .task-step__text {
+    color: var(--text-light);
+}
+.dark .task-step--done .task-step__check {
+    background: var(--sage-300);
+    border-color: var(--sage-300);
+}
+
+/* ── Exercise cards ── */
+.exercise-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--sage-200);
+    background: white;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.exercise-card:hover {
+    border-color: var(--sage-400);
+    box-shadow: 0 4px 12px rgba(124, 154, 114, 0.1);
+    transform: translateY(-1px);
+}
+.exercise-card__icon {
+    font-size: 1.75rem;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    background: var(--sage-100);
+    flex-shrink: 0;
+}
+.exercise-card__info {
+    flex: 1;
+}
+.exercise-card__title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.exercise-card__desc {
+    font-size: 0.75rem;
+    color: var(--sage-400);
+    margin-top: 0.125rem;
+}
+.dark .exercise-card {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+}
+.dark .exercise-card:hover {
+    border-color: var(--sage-400);
+    box-shadow: 0 4px 12px rgba(163, 192, 152, 0.1);
+}
+.dark .exercise-card__icon {
+    background: rgba(163, 192, 152, 0.12);
+}
+.dark .exercise-card__title {
+    color: var(--text-light);
+}
+.dark .exercise-card__desc {
+    color: var(--sage-300);
+}
+
+/* ── Breathing animation ── */
+.breathing-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(124, 154, 114, 0.12);
+    border: 2px solid var(--sage-400);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: breathe 16s ease-in-out infinite;
+}
+.dark .breathing-circle {
+    background: rgba(163, 192, 152, 0.1);
+    border-color: var(--sage-300);
+}
+@keyframes breathe {
+    0%   { transform: scale(0.6); }
+    25%  { transform: scale(1);   }
+    50%  { transform: scale(1);   }
+    75%  { transform: scale(0.6); }
+    100% { transform: scale(0.6); }
+}
+
+/* ── View transitions ── */
+.view-enter {
+    animation: viewFadeIn 0.25s ease forwards;
+}
+@keyframes viewFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Step feedback ── */
+.step-feedback {
+    animation: feedbackFade 2s ease forwards;
+}
+@keyframes feedbackFade {
+    0%   { opacity: 0; transform: translateY(4px); }
+    15%  { opacity: 1; transform: translateY(0); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ── Insight card ── */
+.insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-lg);
+    background: var(--sage-50);
+    border: 1px solid var(--sage-200);
+}
+.dark .insight-card {
+    background: var(--sage-800);
+    border-color: var(--sage-700);
+}
+
+/* ── Smooth scroll ── */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--sage-200); border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: var(--sage-700); }

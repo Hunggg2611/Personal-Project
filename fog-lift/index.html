@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FogLift — Daily toolkit for brain fog & SCT/CDS</title>
+    <meta name="description" content="A calm, gentle daily toolkit for people with brain fog, SCT (Sluggish Cognitive Tempo), and CDS (Cognitive Disengagement Syndrome). Track fog patterns, break tasks into micro-steps, and ground yourself.">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Dark mode flash prevention -->
+    <script>
+        (function(){var d=localStorage.getItem("fl_dark_mode");if(d==="true"||(d===null&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")})();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        sage: {
+                            50: '#f5f7f4',
+                            100: '#eef2ec',
+                            200: '#c8d5c3',
+                            300: '#a3c098',
+                            400: '#7c9a72',
+                            500: '#6b8a62',
+                            600: '#5a7a52',
+                            700: '#3a4538',
+                            800: '#242b24',
+                            900: '#1a1f1a',
+                            950: '#131713'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-sans bg-sage-50 dark:bg-sage-900 text-[#3d4a3b] dark:text-[#d4ddd0] antialiased min-h-screen">
+
+    <!-- ── Navigation ── -->
+    <nav id="main-nav" class="nav-glass fixed bottom-0 md:bottom-auto md:top-0 inset-x-0 z-50 border-t md:border-t-0 md:border-b border-sage-200 dark:border-sage-700" aria-label="Main navigation">
+        <div class="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+            <!-- Logo (desktop only) -->
+            <a href="#dashboard" class="hidden md:flex items-center gap-2 shrink-0">
+                <div class="w-8 h-8 bg-sage-400 dark:bg-sage-300 rounded-xl flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white dark:text-sage-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-1.5 3-5 6-5 11a5 5 0 0010 0c0-5-3.5-8-5-11z"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-lg">Fog<span class="text-sage-400 dark:text-sage-300">Lift</span></span>
+            </a>
+
+            <!-- Tab buttons -->
+            <div class="flex items-center justify-around w-full md:w-auto md:gap-1">
+                <button class="nav-tab nav-tab--active" data-route="dashboard" aria-label="Dashboard" aria-current="page">
+                    <svg class="nav-tab__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/>
+                    </svg>
+                    <span class="nav-tab__label">Home</span>
+                </button>
+                <button class="nav-tab" data-route="fog" aria-label="Fog Tracker">
+                    <svg class="nav-tab__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                    </svg>
+                    <span class="nav-tab__label">Fog</span>
+                </button>
+                <button class="nav-tab" data-route="tasks" aria-label="Tasks">
+                    <svg class="nav-tab__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    <span class="nav-tab__label">Tasks</span>
+                </button>
+                <button class="nav-tab" data-route="grounding" aria-label="Grounding">
+                    <svg class="nav-tab__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-1.5 3-5 6-5 11a5 5 0 0010 0c0-5-3.5-8-5-11z"/>
+                    </svg>
+                    <span class="nav-tab__label">Ground</span>
+                </button>
+            </div>
+
+            <!-- Dark mode toggle (desktop) -->
+            <button id="btn-dark-mode" class="hidden md:flex items-center justify-center w-10 h-10 rounded-xl hover:bg-sage-100 dark:hover:bg-sage-800 transition-colors shrink-0" aria-label="Toggle dark mode">
+                <svg id="icon-moon" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <svg id="icon-sun" class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ── Main content ── -->
+    <main class="pb-20 md:pb-8 md:pt-20 max-w-2xl mx-auto px-4">
+
+        <!-- ═══ View: Dashboard ═══ -->
+        <section id="view-dashboard" class="view py-6 space-y-5" aria-labelledby="greeting-heading">
+            <!-- Greeting -->
+            <div>
+                <h1 id="greeting-heading" class="text-2xl font-bold"></h1>
+                <p id="greeting-sub" class="text-sm text-sage-400 dark:text-sage-300 mt-1"></p>
+            </div>
+
+            <!-- Encouragement -->
+            <div class="bg-sage-100 dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700">
+                <p id="encouragement-text" class="text-sm leading-relaxed italic"></p>
+            </div>
+
+            <!-- Fog summary -->
+            <div class="bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300 mb-3">Today's fog</h2>
+                <div class="flex items-center gap-4">
+                    <div id="fog-avg-display" class="text-3xl font-bold text-sage-400 dark:text-sage-300">--</div>
+                    <div>
+                        <p id="fog-avg-label" class="text-sm">No entries yet</p>
+                        <p id="energy-trend" class="text-xs text-sage-400 dark:text-sage-300 mt-0.5"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active task card -->
+            <div id="active-task-card" class="hidden bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300 mb-2">Current task</h2>
+                <p id="active-task-name" class="font-semibold mb-1"></p>
+                <p class="text-sm text-sage-400 dark:text-sage-300 mb-3">Just start with: <span id="active-step-text" class="text-[#3d4a3b] dark:text-[#d4ddd0] font-medium"></span></p>
+                <button id="btn-continue-task" class="px-5 py-2.5 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all">
+                    Continue, when you're ready
+                </button>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="grid grid-cols-3 gap-3">
+                <button class="quick-action" data-action="log-feeling">
+                    <div class="quick-action__icon">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                        </svg>
+                    </div>
+                    <span class="quick-action__label">Log feeling</span>
+                </button>
+                <button class="quick-action" data-action="start-task">
+                    <div class="quick-action__icon">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="quick-action__label">Start task</span>
+                </button>
+                <button class="quick-action" data-action="grounding">
+                    <div class="quick-action__icon">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-1.5 3-5 6-5 11a5 5 0 0010 0c0-5-3.5-8-5-11z"/>
+                        </svg>
+                    </div>
+                    <span class="quick-action__label">Need grounding?</span>
+                </button>
+            </div>
+
+            <!-- Mobile dark mode toggle -->
+            <div class="md:hidden flex justify-center pt-2">
+                <button id="btn-dark-mode-mobile" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-sage-400 dark:text-sage-300 hover:bg-sage-100 dark:hover:bg-sage-800 transition-colors" aria-label="Toggle dark mode">
+                    <svg class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <svg class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                    <span class="dark:hidden">Dark mode</span>
+                    <span class="hidden dark:inline">Light mode</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ═══ View: Fog Tracker ═══ -->
+        <section id="view-fog" class="view py-6 space-y-5 hidden" aria-labelledby="fog-heading">
+            <h1 id="fog-heading" class="text-xl font-bold">Fog Tracker</h1>
+
+            <!-- Quick log -->
+            <div class="bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700 space-y-5">
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300">How are you right now?</h2>
+
+                <!-- Fog level -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Fog level</label>
+                    <div id="fog-level-group" class="flex gap-1.5" role="radiogroup" aria-label="Fog level">
+                        <button class="level-btn" data-level="1" role="radio" aria-checked="false"><span class="level-btn__num">1</span>Clear</button>
+                        <button class="level-btn" data-level="2" role="radio" aria-checked="false"><span class="level-btn__num">2</span>Light</button>
+                        <button class="level-btn" data-level="3" role="radio" aria-checked="false"><span class="level-btn__num">3</span>Moderate</button>
+                        <button class="level-btn" data-level="4" role="radio" aria-checked="false"><span class="level-btn__num">4</span>Thick</button>
+                        <button class="level-btn" data-level="5" role="radio" aria-checked="false"><span class="level-btn__num">5</span>Dense</button>
+                    </div>
+                </div>
+
+                <!-- Energy level -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Energy level</label>
+                    <div id="energy-level-group" class="flex gap-1.5" role="radiogroup" aria-label="Energy level">
+                        <button class="level-btn" data-level="1" role="radio" aria-checked="false"><span class="level-btn__num">1</span>Drained</button>
+                        <button class="level-btn" data-level="2" role="radio" aria-checked="false"><span class="level-btn__num">2</span>Low</button>
+                        <button class="level-btn" data-level="3" role="radio" aria-checked="false"><span class="level-btn__num">3</span>Okay</button>
+                        <button class="level-btn" data-level="4" role="radio" aria-checked="false"><span class="level-btn__num">4</span>Good</button>
+                        <button class="level-btn" data-level="5" role="radio" aria-checked="false"><span class="level-btn__num">5</span>Energized</button>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div>
+                    <label for="fog-note" class="block text-sm font-medium mb-2">Note <span class="text-sage-400 dark:text-sage-300 font-normal">(optional)</span></label>
+                    <textarea id="fog-note" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-sage-200 dark:border-sage-700 bg-sage-50 dark:bg-sage-900 text-sm focus:outline-none focus:ring-2 focus:ring-sage-400/30 focus:border-sage-400 transition-all resize-none" placeholder="Anything you notice..."></textarea>
+                </div>
+
+                <button id="btn-log-fog" class="w-full px-5 py-3 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>Log this moment</button>
+            </div>
+
+            <!-- Today's timeline -->
+            <div>
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300 mb-3">Today's timeline</h2>
+                <div id="fog-timeline" class="space-y-2">
+                    <p id="fog-timeline-empty" class="text-sm text-sage-400 dark:text-sage-300 text-center py-4">No entries today. Log when you're ready.</p>
+                </div>
+            </div>
+
+            <!-- 7-day chart -->
+            <div class="bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300 mb-3">7-day pattern</h2>
+                <div id="fog-chart-container" class="relative" style="height: 200px;">
+                    <canvas id="fog-chart" class="w-full h-full"></canvas>
+                </div>
+                <p id="fog-chart-empty" class="text-sm text-sage-400 dark:text-sage-300 text-center py-4">Log a few days to see patterns.</p>
+            </div>
+
+            <!-- Insights -->
+            <div id="fog-insights" class="space-y-2"></div>
+        </section>
+
+        <!-- ═══ View: Task Initiator ═══ -->
+        <section id="view-tasks" class="view py-6 space-y-5 hidden" aria-labelledby="tasks-heading">
+            <h1 id="tasks-heading" class="text-xl font-bold">Gentle Task Initiator</h1>
+
+            <!-- New task input -->
+            <div id="task-input-card" class="bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700 space-y-4">
+                <label for="task-input" class="block text-sm font-medium">What do you need to do?</label>
+                <textarea id="task-input" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-sage-200 dark:border-sage-700 bg-sage-50 dark:bg-sage-900 text-sm focus:outline-none focus:ring-2 focus:ring-sage-400/30 focus:border-sage-400 transition-all resize-none" placeholder="For example: reply to an email, clean the kitchen, study for an exam..."></textarea>
+                <button id="btn-break-down" class="w-full px-5 py-3 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>Break it down for me</button>
+            </div>
+
+            <!-- Active task -->
+            <div id="task-active-card" class="hidden bg-white dark:bg-sage-800 rounded-2xl p-5 border border-sage-200 dark:border-sage-700 space-y-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h2 id="task-active-title" class="font-semibold"></h2>
+                        <p id="task-active-progress" class="text-xs text-sage-400 dark:text-sage-300 mt-0.5"></p>
+                    </div>
+                    <button id="btn-set-aside" class="text-xs text-sage-400 dark:text-sage-300 hover:text-red-400 dark:hover:text-red-300 transition-colors px-2 py-1">set aside</button>
+                </div>
+
+                <!-- Current step highlight -->
+                <div id="task-current-step" class="bg-sage-50 dark:bg-sage-900 rounded-xl p-4 border border-sage-200 dark:border-sage-700">
+                    <p class="text-xs text-sage-400 dark:text-sage-300 mb-1">Just start with...</p>
+                    <p id="task-current-step-text" class="font-medium"></p>
+                </div>
+
+                <!-- Step feedback -->
+                <p id="step-feedback" class="text-sm text-sage-400 dark:text-sage-300 text-center hidden"></p>
+
+                <!-- Steps list -->
+                <div id="task-steps-list" class="space-y-2"></div>
+
+                <!-- Completion -->
+                <div id="task-complete-msg" class="hidden text-center py-4">
+                    <p class="text-lg font-semibold text-sage-400 dark:text-sage-300 mb-1">You did it.</p>
+                    <p class="text-sm">That took real effort, and you followed through.</p>
+                    <button id="btn-new-task" class="mt-4 px-5 py-2.5 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all">Start something new</button>
+                </div>
+            </div>
+
+            <!-- Recently completed -->
+            <div id="completed-tasks-section" class="hidden">
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-sage-400 dark:text-sage-300 mb-3">Recently completed</h2>
+                <div id="completed-tasks-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- ═══ View: Grounding ═══ -->
+        <section id="view-grounding" class="view py-6 space-y-5 hidden" aria-labelledby="grounding-heading">
+            <h1 id="grounding-heading" class="text-xl font-bold">Grounding Exercises</h1>
+            <p class="text-sm text-sage-400 dark:text-sage-300">Choose something that feels right. No pressure.</p>
+
+            <!-- Exercise library -->
+            <div id="exercise-library" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+            <!-- Active exercise -->
+            <div id="exercise-active" class="hidden">
+                <div class="bg-white dark:bg-sage-800 rounded-2xl p-6 border border-sage-200 dark:border-sage-700 space-y-5">
+                    <div class="flex items-center justify-between">
+                        <h2 id="exercise-title" class="font-semibold"></h2>
+                        <button id="btn-exit-exercise" class="text-xs text-sage-400 dark:text-sage-300 hover:text-[#3d4a3b] dark:hover:text-[#d4ddd0] transition-colors px-2 py-1">back to list</button>
+                    </div>
+                    <p id="exercise-description" class="text-sm leading-relaxed"></p>
+
+                    <!-- Step display -->
+                    <div id="exercise-step-display" class="bg-sage-50 dark:bg-sage-900 rounded-xl p-6 text-center min-h-[140px] flex items-center justify-center">
+                        <p id="exercise-step-text" class="text-lg font-medium leading-relaxed"></p>
+                    </div>
+
+                    <!-- Breathing animation -->
+                    <div id="breathing-animation" class="hidden flex items-center justify-center py-4">
+                        <div class="breathing-circle">
+                            <span id="breathing-instruction" class="text-sm font-semibold text-sage-400 dark:text-sage-300"></span>
+                        </div>
+                    </div>
+
+                    <!-- Step nav -->
+                    <div class="flex items-center justify-between">
+                        <p id="exercise-step-counter" class="text-xs text-sage-400 dark:text-sage-300"></p>
+                        <button id="btn-exercise-next" class="px-5 py-2.5 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all">Next</button>
+                    </div>
+
+                    <!-- Completion -->
+                    <div id="exercise-complete" class="hidden text-center py-4">
+                        <p class="text-lg font-semibold text-sage-400 dark:text-sage-300 mb-1">Welcome back.</p>
+                        <p class="text-sm">Take a moment before moving on.</p>
+                        <button id="btn-exercise-done" class="mt-4 px-5 py-2.5 bg-sage-400 hover:bg-sage-500 dark:bg-sage-300 dark:hover:bg-sage-200 text-white dark:text-sage-900 font-semibold rounded-xl text-sm transition-all">I'm back</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ── Scripts (dependency order) ── -->
+    <script src="js/store.js"></script>
+    <script src="js/fog-tracker.js"></script>
+    <script src="js/task-initiator.js"></script>
+    <script src="js/grounding.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
