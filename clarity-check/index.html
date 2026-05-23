@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity Check-in</title>
+    <meta name="description" content="Periodic mental clarity check-ins for brain fog & SCT/CDS">
+    <meta name="theme-color" content="#6b9cc3">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sky: {
+                            50: '#f4f8fb',
+                            100: '#eaf1f7',
+                            200: '#c5d8e8',
+                            300: '#8db8d9',
+                            400: '#6b9cc3',
+                            500: '#5a8bb2',
+                            600: '#4a7a9e',
+                            700: '#2d3a47',
+                            800: '#1e2630',
+                            900: '#151b21',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        (function() {
+            var d = localStorage.getItem('cc_dark_mode');
+            if (d === 'true' || (d === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-sky-50 dark:bg-sky-900 text-gray-700 dark:text-sky-100/90">
+
+    <main class="max-w-lg mx-auto px-4 pt-6 pb-24">
+
+        <!-- ===== CHECK-IN VIEW ===== -->
+        <div id="view-checkin" class="view-enter">
+
+            <!-- Streak + XP header -->
+            <div id="home-stats" class="flex items-center justify-between mb-4">
+                <div id="streak-badge"></div>
+                <div id="xp-bar" class="flex-1 ml-4 max-w-48"></div>
+            </div>
+
+            <h1 class="text-xl font-bold mb-1">Clarity Check-in</h1>
+            <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-5">How clear is your mind right now?</p>
+
+            <!-- Reminder banner -->
+            <div id="reminder-banner" class="reminder-banner hidden">
+                <span class="reminder-banner__text" id="reminder-time-text"></span>
+                <button id="btn-dismiss-reminder" class="reminder-banner__dismiss" aria-label="Dismiss reminder">&times;</button>
+            </div>
+
+            <!-- Check-in form -->
+            <div id="checkin-form">
+                <div class="mb-5">
+                    <div id="clarity-buttons" class="clarity-buttons" aria-label="Clarity level"></div>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-sm font-semibold mb-1">What are you doing?</label>
+                    <div id="activity-hint" class="text-xs text-sky-400 dark:text-sky-300/50 mb-2"></div>
+                    <div id="activity-quick-picks" class="quick-picks mb-2"></div>
+                    <button id="btn-more-activities" class="more-toggle hidden">More activities...</button>
+                    <div id="activity-grid" class="activity-grid mt-2"></div>
+                </div>
+
+                <div class="mb-5">
+                    <button id="btn-show-note" class="note-toggle-btn">
+                        <span>+</span> Add a note
+                    </button>
+                    <div id="note-container" class="note-container mt-2">
+                        <input type="text" id="checkin-note" placeholder="Anything on your mind..."
+                            class="w-full px-3 py-2.5 bg-sky-100 dark:bg-sky-800 border border-sky-200 dark:border-sky-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-300 placeholder:text-sky-300 dark:placeholder:text-sky-700">
+                    </div>
+                </div>
+
+                <button id="btn-checkin-submit" class="btn-primary" disabled>Check in</button>
+            </div>
+
+            <!-- Confirmation -->
+            <div id="checkin-confirmation" class="hidden confirmation-card">
+                <div id="celebration-container" class="celebration-container"></div>
+                <p id="confirm-praise" class="text-xl font-bold mb-1"></p>
+                <p id="confirm-xp" class="text-2xl font-bold text-sky-400 dark:text-sky-300 mb-1"></p>
+                <p id="confirm-bonus" class="text-sm font-semibold hidden mb-1"></p>
+                <div id="confirm-streak" class="flex items-center justify-center gap-1.5 mb-3"></div>
+                <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-0.5" id="confirm-clarity"></p>
+                <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-3" id="confirm-activity"></p>
+                <div id="confirm-insight" class="home-insight text-xs"></div>
+            </div>
+
+            <!-- Mini insight -->
+            <div id="home-insight" class="mt-4"></div>
+        </div>
+
+        <!-- ===== PATTERNS VIEW ===== -->
+        <div id="view-patterns" class="hidden view-enter">
+            <h1 class="text-xl font-bold mb-1">Patterns</h1>
+            <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-5">Last 4 weeks of check-ins</p>
+
+            <div id="patterns-empty" class="hidden text-center py-12">
+                <p class="text-2xl mb-2">📊</p>
+                <p class="text-sky-400 dark:text-sky-300/70 text-sm font-semibold mb-1">Patterns are brewing...</p>
+                <p class="text-sky-300 dark:text-sky-300/50 text-xs">A few more check-ins and your personal insights will appear here.</p>
+            </div>
+
+            <div id="patterns-content">
+                <!-- Heatmap -->
+                <div class="mb-6" id="heatmap-section">
+                    <h2 class="text-sm font-semibold mb-2">Time-of-day heatmap</h2>
+                    <div class="bg-sky-100 dark:bg-sky-800 rounded-xl p-3 border border-sky-200 dark:border-sky-700">
+                        <div id="heatmap-grid" class="heatmap-grid"></div>
+                        <div class="flex items-center justify-center gap-2 mt-2 text-xs text-sky-400 dark:text-sky-300/60">
+                            <span>Foggy</span>
+                            <div class="flex gap-1">
+                                <div class="w-3 h-3 rounded-sm" style="background:#d4a04a"></div>
+                                <div class="w-3 h-3 rounded-sm" style="background:#c4a86a"></div>
+                                <div class="w-3 h-3 rounded-sm" style="background:#9ab3c7"></div>
+                                <div class="w-3 h-3 rounded-sm" style="background:#6b9cc3"></div>
+                                <div class="w-3 h-3 rounded-sm" style="background:#4a9ed4"></div>
+                            </div>
+                            <span>Clear</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity correlations -->
+                <div class="mb-6" id="correlation-section">
+                    <h2 class="text-sm font-semibold mb-2">Activity correlations</h2>
+                    <div id="correlation-bars" class="bg-sky-100 dark:bg-sky-800 rounded-xl p-3 border border-sky-200 dark:border-sky-700"></div>
+                </div>
+
+                <!-- Weekly chart -->
+                <div class="mb-6">
+                    <h2 class="text-sm font-semibold mb-2">4-week trend</h2>
+                    <div class="bg-sky-100 dark:bg-sky-800 rounded-xl p-3 border border-sky-200 dark:border-sky-700">
+                        <canvas id="weekly-chart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div>
+                    <h2 class="text-sm font-semibold mb-2">Insights</h2>
+                    <div id="insight-cards" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== HISTORY VIEW ===== -->
+        <div id="view-history" class="hidden view-enter">
+            <h1 class="text-xl font-bold mb-1">History</h1>
+            <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-5">Your check-in log</p>
+
+            <div id="history-list"></div>
+            <div class="text-center mt-4">
+                <button id="btn-load-more" class="btn-secondary hidden">Show earlier</button>
+            </div>
+        </div>
+
+        <!-- ===== SETTINGS VIEW ===== -->
+        <div id="view-settings" class="hidden view-enter">
+            <h1 class="text-xl font-bold mb-1">Settings</h1>
+            <p class="text-sm text-sky-400 dark:text-sky-300/70 mb-5">Customize your experience</p>
+
+            <!-- Reminder frequency -->
+            <div class="settings-section mb-4">
+                <p class="settings-section__title">Reminder frequency</p>
+                <div class="radio-group">
+                    <span class="radio-pill">
+                        <input type="radio" name="reminder-freq" id="freq-30m" value="30m">
+                        <label for="freq-30m">30 min</label>
+                    </span>
+                    <span class="radio-pill">
+                        <input type="radio" name="reminder-freq" id="freq-1h" value="1h">
+                        <label for="freq-1h">1 hour</label>
+                    </span>
+                    <span class="radio-pill">
+                        <input type="radio" name="reminder-freq" id="freq-2h" value="2h">
+                        <label for="freq-2h">2 hours</label>
+                    </span>
+                    <span class="radio-pill">
+                        <input type="radio" name="reminder-freq" id="freq-3h" value="3h">
+                        <label for="freq-3h">3 hours</label>
+                    </span>
+                    <span class="radio-pill">
+                        <input type="radio" name="reminder-freq" id="freq-off" value="off">
+                        <label for="freq-off">Off</label>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-section mb-4">
+                <p class="settings-section__title">Notifications</p>
+                <div class="toggle-row">
+                    <span class="toggle-row__label">Browser notifications</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="notifications-toggle">
+                        <span class="toggle-switch__slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Quiet hours -->
+            <div class="settings-section mb-4">
+                <p class="settings-section__title">Quiet hours</p>
+                <p class="text-xs text-sky-400 dark:text-sky-300/60 mb-3">No reminders during these hours</p>
+                <div class="flex items-center gap-3">
+                    <input type="time" id="quiet-start" class="px-2 py-1.5 bg-sky-100 dark:bg-sky-800 border border-sky-200 dark:border-sky-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    <span class="text-sm text-sky-400">to</span>
+                    <input type="time" id="quiet-end" class="px-2 py-1.5 bg-sky-100 dark:bg-sky-800 border border-sky-200 dark:border-sky-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+            </div>
+
+            <!-- Appearance -->
+            <div class="settings-section mb-4">
+                <p class="settings-section__title">Appearance</p>
+                <div class="toggle-row">
+                    <span class="toggle-row__label">Dark mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="toggle-switch__slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Data -->
+            <div class="settings-section">
+                <p class="settings-section__title">Data</p>
+                <div class="flex gap-3">
+                    <button id="btn-export-csv" class="btn-secondary">Export CSV</button>
+                    <button id="btn-clear-data" class="btn-danger">Clear all data</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="nav-glass" aria-label="Main navigation">
+        <div class="nav-tabs">
+            <button class="nav-tab" id="tab-checkin" data-route="checkin" aria-label="Check-in">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Check-in</span>
+            </button>
+            <button class="nav-tab" id="tab-patterns" data-route="patterns" aria-label="Patterns">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
+                </svg>
+                <span>Patterns</span>
+            </button>
+            <button class="nav-tab" id="tab-history" data-route="history" aria-label="History">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>History</span>
+            </button>
+            <button class="nav-tab" id="tab-settings" data-route="settings" aria-label="Settings">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Clear data modal -->
+    <div id="clear-data-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <p class="modal-card__title">Clear all data?</p>
+            <p class="modal-card__text">This will remove all your check-ins, XP, streaks, and settings. This can't be undone.</p>
+            <div class="flex gap-3 justify-center">
+                <button id="btn-cancel-clear" class="btn-secondary">Cancel</button>
+                <button id="btn-confirm-clear" class="btn-danger">Clear everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Level-up modal -->
+    <div id="level-up-modal" class="modal-overlay hidden">
+        <div class="modal-card level-up-card">
+            <div id="level-badge" class="level-badge"></div>
+            <p id="level-up-text" class="text-lg font-bold mb-1"></p>
+            <p class="text-sm text-sky-400 dark:text-sky-300/70">Keep going!</p>
+        </div>
+    </div>
+
+    <!-- Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+
+    <script src="js/store.js"></script>
+    <script src="js/rewards.js"></script>
+    <script src="js/check-in.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/patterns.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
